@@ -28,13 +28,7 @@ package java.lang;
 import java.io.ObjectStreamField;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Formatter;
-import java.util.Locale;
-import java.util.Objects;
-import java.util.StringJoiner;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -97,38 +91,49 @@ import java.util.regex.PatternSyntaxException;
  * Unicode code points (i.e., characters), in addition to those for
  * dealing with Unicode code units (i.e., {@code char} values).
  *
- * @author  Lee Boynton
- * @author  Arthur van Hoff
- * @author  Martin Buchholz
- * @author  Ulf Zibis
- * @see     java.lang.Object#toString()
- * @see     java.lang.StringBuffer
- * @see     java.lang.StringBuilder
- * @see     java.nio.charset.Charset
- * @since   JDK1.0
+ * @author Lee Boynton
+ * @author Arthur van Hoff
+ * @author Martin Buchholz
+ * @author Ulf Zibis
+ * @see java.lang.Object#toString()
+ * @see java.lang.StringBuffer
+ * @see java.lang.StringBuilder
+ * @see java.nio.charset.Charset
+ * @since JDK1.0
+ * <p>
+ * <p>
+ * <p>
+ * === 笔记 ===
+ * - String 本质为 char[] 数组
  */
 
 public final class String
-    implements java.io.Serializable, Comparable<String>, CharSequence {
-    /** The value is used for character storage. */
+        implements java.io.Serializable, Comparable<String>, CharSequence {
+    /**
+     * The value is used for character storage.
+     */
     private final char value[];
-
-    /** Cache the hash code for the string */
+    
+    /**
+     * Cache the hash code for the string
+     */
     private int hash; // Default to 0
-
-    /** use serialVersionUID from JDK 1.0.2 for interoperability */
+    
+    /**
+     * use serialVersionUID from JDK 1.0.2 for interoperability
+     */
     private static final long serialVersionUID = -6849794470754667710L;
-
+    
     /**
      * Class String is special cased within the Serialization Stream Protocol.
-     *
+     * <p>
      * A String instance is written into an ObjectOutputStream according to
      * <a href="{@docRoot}/../platform/serialization/spec/output.html">
      * Object Serialization Specification, Section 6.2, "Stream Elements"</a>
      */
     private static final ObjectStreamField[] serialPersistentFields =
-        new ObjectStreamField[0];
-
+            new ObjectStreamField[0];
+    
     /**
      * Initializes a newly created {@code String} object so that it represents
      * an empty character sequence.  Note that use of this constructor is
@@ -137,7 +142,7 @@ public final class String
     public String() {
         this.value = "".value;
     }
-
+    
     /**
      * Initializes a newly created {@code String} object so that it represents
      * the same sequence of characters as the argument; in other words, the
@@ -145,27 +150,26 @@ public final class String
      * explicit copy of {@code original} is needed, use of this constructor is
      * unnecessary since Strings are immutable.
      *
-     * @param  original
-     *         A {@code String}
+     * @param original A {@code String}
      */
     public String(String original) {
         this.value = original.value;
         this.hash = original.hash;
     }
-
+    
     /**
      * Allocates a new {@code String} so that it represents the sequence of
      * characters currently contained in the character array argument. The
      * contents of the character array are copied; subsequent modification of
      * the character array does not affect the newly created string.
      *
-     * @param  value
-     *         The initial value of the string
+     * @param value The initial value of the string
      */
     public String(char value[]) {
+        // 笔记: 防御性拷贝
         this.value = Arrays.copyOf(value, value.length);
     }
-
+    
     /**
      * Allocates a new {@code String} that contains characters from a subarray
      * of the character array argument. The {@code offset} argument is the
@@ -174,18 +178,11 @@ public final class String
      * subarray are copied; subsequent modification of the character array does
      * not affect the newly created string.
      *
-     * @param  value
-     *         Array that is the source of characters
-     *
-     * @param  offset
-     *         The initial offset
-     *
-     * @param  count
-     *         The length
-     *
-     * @throws  IndexOutOfBoundsException
-     *          If the {@code offset} and {@code count} arguments index
-     *          characters outside the bounds of the {@code value} array
+     * @param value  Array that is the source of characters
+     * @param offset The initial offset
+     * @param count  The length
+     * @throws IndexOutOfBoundsException If the {@code offset} and {@code count} arguments index
+     *                                   characters outside the bounds of the {@code value} array
      */
     public String(char value[], int offset, int count) {
         if (offset < 0) {
@@ -204,10 +201,13 @@ public final class String
         if (offset > value.length - count) {
             throw new StringIndexOutOfBoundsException(offset + count);
         }
-        this.value = Arrays.copyOfRange(value, offset, offset+count);
+        // 笔记: 防御性拷贝
+        this.value = Arrays.copyOfRange(value, offset, offset + count);
     }
-
+    
     /**
+     * Unicode int 数组 转为字符串
+     * <p>
      * Allocates a new {@code String} that contains characters from a subarray
      * of the <a href="Character.html#unicode">Unicode code point</a> array
      * argument.  The {@code offset} argument is the index of the first code
@@ -216,24 +216,14 @@ public final class String
      * {@code char}s; subsequent modification of the {@code int} array does not
      * affect the newly created string.
      *
-     * @param  codePoints
-     *         Array that is the source of Unicode code points
-     *
-     * @param  offset
-     *         The initial offset
-     *
-     * @param  count
-     *         The length
-     *
-     * @throws  IllegalArgumentException
-     *          If any invalid Unicode code point is found in {@code
-     *          codePoints}
-     *
-     * @throws  IndexOutOfBoundsException
-     *          If the {@code offset} and {@code count} arguments index
-     *          characters outside the bounds of the {@code codePoints} array
-     *
-     * @since  1.5
+     * @param codePoints Array that is the source of Unicode code points
+     * @param offset     The initial offset
+     * @param count      The length
+     * @throws IllegalArgumentException  If any invalid Unicode code point is found in {@code
+     *                                   codePoints}
+     * @throws IndexOutOfBoundsException If the {@code offset} and {@code count} arguments index
+     *                                   characters outside the bounds of the {@code codePoints} array
+     * @since 1.5
      */
     public String(int[] codePoints, int offset, int count) {
         if (offset < 0) {
@@ -252,9 +242,10 @@ public final class String
         if (offset > codePoints.length - count) {
             throw new StringIndexOutOfBoundsException(offset + count);
         }
-
+        
         final int end = offset + count;
-
+        
+        // 1. 判断是否符合 Unicode 范围
         // Pass 1: Compute precise size of char[]
         int n = count;
         for (int i = offset; i < end; i++) {
@@ -265,22 +256,25 @@ public final class String
                 n++;
             else throw new IllegalArgumentException(Integer.toString(c));
         }
-
+        
+        // 2. 进行填充, 并对增补的字符集进行转换
         // Pass 2: Allocate and fill in char[]
         final char[] v = new char[n];
-
+        
         for (int i = offset, j = 0; i < end; i++, j++) {
             int c = codePoints[i];
             if (Character.isBmpCodePoint(c))
-                v[j] = (char)c;
+                v[j] = (char) c;
             else
                 Character.toSurrogates(c, v, j++);
         }
-
+        
         this.value = v;
     }
-
+    
     /**
+     * ascii 字节数组转为字符串
+     * <p>
      * Allocates a new {@code String} constructed from a subarray of an array
      * of 8-bit integer values.
      *
@@ -291,53 +285,45 @@ public final class String
      * <p> Each {@code byte} in the subarray is converted to a {@code char} as
      * specified in the method above.
      *
+     * @param ascii  The bytes to be converted to characters
+     * @param hibyte The top 8 bits of each 16-bit Unicode code unit
+     * @param offset The initial offset
+     * @param count  The length
+     * @throws IndexOutOfBoundsException If the {@code offset} or {@code count} argument is invalid
+     * @see #String(byte[], int)
+     * @see #String(byte[], int, int, java.lang.String)
+     * @see #String(byte[], int, int, java.nio.charset.Charset)
+     * @see #String(byte[], int, int)
+     * @see #String(byte[], java.lang.String)
+     * @see #String(byte[], java.nio.charset.Charset)
+     * @see #String(byte[])
      * @deprecated This method does not properly convert bytes into characters.
      * As of JDK&nbsp;1.1, the preferred way to do this is via the
      * {@code String} constructors that take a {@link
      * java.nio.charset.Charset}, charset name, or that use the platform's
      * default charset.
-     *
-     * @param  ascii
-     *         The bytes to be converted to characters
-     *
-     * @param  hibyte
-     *         The top 8 bits of each 16-bit Unicode code unit
-     *
-     * @param  offset
-     *         The initial offset
-     * @param  count
-     *         The length
-     *
-     * @throws  IndexOutOfBoundsException
-     *          If the {@code offset} or {@code count} argument is invalid
-     *
-     * @see  #String(byte[], int)
-     * @see  #String(byte[], int, int, java.lang.String)
-     * @see  #String(byte[], int, int, java.nio.charset.Charset)
-     * @see  #String(byte[], int, int)
-     * @see  #String(byte[], java.lang.String)
-     * @see  #String(byte[], java.nio.charset.Charset)
-     * @see  #String(byte[])
      */
     @Deprecated
     public String(byte ascii[], int hibyte, int offset, int count) {
         checkBounds(ascii, offset, count);
         char value[] = new char[count];
-
+        
         if (hibyte == 0) {
-            for (int i = count; i-- > 0;) {
-                value[i] = (char)(ascii[i + offset] & 0xff);
+            for (int i = count; i-- > 0; ) {
+                value[i] = (char) (ascii[i + offset] & 0xff);
             }
         } else {
             hibyte <<= 8;
-            for (int i = count; i-- > 0;) {
-                value[i] = (char)(hibyte | (ascii[i + offset] & 0xff));
+            for (int i = count; i-- > 0; ) {
+                value[i] = (char) (hibyte | (ascii[i + offset] & 0xff));
             }
         }
         this.value = value;
     }
-
+    
     /**
+     * ascii 字节数组转为字符串
+     * <p>
      * Allocates a new {@code String} containing characters constructed from
      * an array of 8-bit integer values. Each character <i>c</i>in the
      * resulting string is constructed from the corresponding component
@@ -348,30 +334,25 @@ public final class String
      *                         | (<b><i>b</i></b> &amp; 0xff))
      * </pre></blockquote>
      *
-     * @deprecated  This method does not properly convert bytes into
+     * @param ascii  The bytes to be converted to characters
+     * @param hibyte The top 8 bits of each 16-bit Unicode code unit
+     * @see #String(byte[], int, int, java.lang.String)
+     * @see #String(byte[], int, int, java.nio.charset.Charset)
+     * @see #String(byte[], int, int)
+     * @see #String(byte[], java.lang.String)
+     * @see #String(byte[], java.nio.charset.Charset)
+     * @see #String(byte[])
+     * @deprecated This method does not properly convert bytes into
      * characters.  As of JDK&nbsp;1.1, the preferred way to do this is via the
      * {@code String} constructors that take a {@link
      * java.nio.charset.Charset}, charset name, or that use the platform's
      * default charset.
-     *
-     * @param  ascii
-     *         The bytes to be converted to characters
-     *
-     * @param  hibyte
-     *         The top 8 bits of each 16-bit Unicode code unit
-     *
-     * @see  #String(byte[], int, int, java.lang.String)
-     * @see  #String(byte[], int, int, java.nio.charset.Charset)
-     * @see  #String(byte[], int, int)
-     * @see  #String(byte[], java.lang.String)
-     * @see  #String(byte[], java.nio.charset.Charset)
-     * @see  #String(byte[])
      */
     @Deprecated
     public String(byte ascii[], int hibyte) {
         this(ascii, hibyte, 0, ascii.length);
     }
-
+    
     /* Common private utility method used to bounds check the byte array
      * and requested offset & length values used by the String(byte[],..)
      * constructors.
@@ -384,8 +365,10 @@ public final class String
         if (offset > bytes.length - length)
             throw new StringIndexOutOfBoundsException(offset + length);
     }
-
+    
     /**
+     * 字节数组转为字符串
+     * <p>
      * Constructs a new {@code String} by decoding the specified subarray of
      * bytes using the specified charset.  The length of the new {@code String}
      * is a function of the charset, and hence may not be equal to the length
@@ -396,27 +379,15 @@ public final class String
      * java.nio.charset.CharsetDecoder} class should be used when more control
      * over the decoding process is required.
      *
-     * @param  bytes
-     *         The bytes to be decoded into characters
-     *
-     * @param  offset
-     *         The index of the first byte to decode
-     *
-     * @param  length
-     *         The number of bytes to decode
-
-     * @param  charsetName
-     *         The name of a supported {@linkplain java.nio.charset.Charset
-     *         charset}
-     *
-     * @throws  UnsupportedEncodingException
-     *          If the named charset is not supported
-     *
-     * @throws  IndexOutOfBoundsException
-     *          If the {@code offset} and {@code length} arguments index
-     *          characters outside the bounds of the {@code bytes} array
-     *
-     * @since  JDK1.1
+     * @param bytes       The bytes to be decoded into characters
+     * @param offset      The index of the first byte to decode
+     * @param length      The number of bytes to decode
+     * @param charsetName The name of a supported {@linkplain java.nio.charset.Charset
+     *                    charset}
+     * @throws UnsupportedEncodingException If the named charset is not supported
+     * @throws IndexOutOfBoundsException    If the {@code offset} and {@code length} arguments index
+     *                                      characters outside the bounds of the {@code bytes} array
+     * @since JDK1.1
      */
     public String(byte bytes[], int offset, int length, String charsetName)
             throws UnsupportedEncodingException {
@@ -425,8 +396,10 @@ public final class String
         checkBounds(bytes, offset, length);
         this.value = StringCoding.decode(charsetName, bytes, offset, length);
     }
-
+    
     /**
+     * 字节数组转为字符串
+     * <p>
      * Constructs a new {@code String} by decoding the specified subarray of
      * bytes using the specified {@linkplain java.nio.charset.Charset charset}.
      * The length of the new {@code String} is a function of the charset, and
@@ -437,33 +410,25 @@ public final class String
      * java.nio.charset.CharsetDecoder} class should be used when more control
      * over the decoding process is required.
      *
-     * @param  bytes
-     *         The bytes to be decoded into characters
-     *
-     * @param  offset
-     *         The index of the first byte to decode
-     *
-     * @param  length
-     *         The number of bytes to decode
-     *
-     * @param  charset
-     *         The {@linkplain java.nio.charset.Charset charset} to be used to
-     *         decode the {@code bytes}
-     *
-     * @throws  IndexOutOfBoundsException
-     *          If the {@code offset} and {@code length} arguments index
-     *          characters outside the bounds of the {@code bytes} array
-     *
-     * @since  1.6
+     * @param bytes   The bytes to be decoded into characters
+     * @param offset  The index of the first byte to decode
+     * @param length  The number of bytes to decode
+     * @param charset The {@linkplain java.nio.charset.Charset charset} to be used to
+     *                decode the {@code bytes}
+     * @throws IndexOutOfBoundsException If the {@code offset} and {@code length} arguments index
+     *                                   characters outside the bounds of the {@code bytes} array
+     * @since 1.6
      */
     public String(byte bytes[], int offset, int length, Charset charset) {
         if (charset == null)
             throw new NullPointerException("charset");
         checkBounds(bytes, offset, length);
-        this.value =  StringCoding.decode(charset, bytes, offset, length);
+        this.value = StringCoding.decode(charset, bytes, offset, length);
     }
-
+    
     /**
+     * 字节数组转为字符串
+     * <p>
      * Constructs a new {@code String} by decoding the specified array of bytes
      * using the specified {@linkplain java.nio.charset.Charset charset}.  The
      * length of the new {@code String} is a function of the charset, and hence
@@ -474,24 +439,20 @@ public final class String
      * java.nio.charset.CharsetDecoder} class should be used when more control
      * over the decoding process is required.
      *
-     * @param  bytes
-     *         The bytes to be decoded into characters
-     *
-     * @param  charsetName
-     *         The name of a supported {@linkplain java.nio.charset.Charset
-     *         charset}
-     *
-     * @throws  UnsupportedEncodingException
-     *          If the named charset is not supported
-     *
-     * @since  JDK1.1
+     * @param bytes       The bytes to be decoded into characters
+     * @param charsetName The name of a supported {@linkplain java.nio.charset.Charset
+     *                    charset}
+     * @throws UnsupportedEncodingException If the named charset is not supported
+     * @since JDK1.1
      */
     public String(byte bytes[], String charsetName)
             throws UnsupportedEncodingException {
         this(bytes, 0, bytes.length, charsetName);
     }
-
+    
     /**
+     * 字节数组转为字符串
+     * <p>
      * Constructs a new {@code String} by decoding the specified array of
      * bytes using the specified {@linkplain java.nio.charset.Charset charset}.
      * The length of the new {@code String} is a function of the charset, and
@@ -502,20 +463,18 @@ public final class String
      * java.nio.charset.CharsetDecoder} class should be used when more control
      * over the decoding process is required.
      *
-     * @param  bytes
-     *         The bytes to be decoded into characters
-     *
-     * @param  charset
-     *         The {@linkplain java.nio.charset.Charset charset} to be used to
-     *         decode the {@code bytes}
-     *
-     * @since  1.6
+     * @param bytes   The bytes to be decoded into characters
+     * @param charset The {@linkplain java.nio.charset.Charset charset} to be used to
+     *                decode the {@code bytes}
+     * @since 1.6
      */
     public String(byte bytes[], Charset charset) {
         this(bytes, 0, bytes.length, charset);
     }
-
+    
     /**
+     * 字节数组转为字符串
+     * <p>
      * Constructs a new {@code String} by decoding the specified subarray of
      * bytes using the platform's default charset.  The length of the new
      * {@code String} is a function of the charset, and hence may not be equal
@@ -526,27 +485,21 @@ public final class String
      * java.nio.charset.CharsetDecoder} class should be used when more control
      * over the decoding process is required.
      *
-     * @param  bytes
-     *         The bytes to be decoded into characters
-     *
-     * @param  offset
-     *         The index of the first byte to decode
-     *
-     * @param  length
-     *         The number of bytes to decode
-     *
-     * @throws  IndexOutOfBoundsException
-     *          If the {@code offset} and the {@code length} arguments index
-     *          characters outside the bounds of the {@code bytes} array
-     *
-     * @since  JDK1.1
+     * @param bytes  The bytes to be decoded into characters
+     * @param offset The index of the first byte to decode
+     * @param length The number of bytes to decode
+     * @throws IndexOutOfBoundsException If the {@code offset} and the {@code length} arguments index
+     *                                   characters outside the bounds of the {@code bytes} array
+     * @since JDK1.1
      */
     public String(byte bytes[], int offset, int length) {
         checkBounds(bytes, offset, length);
         this.value = StringCoding.decode(bytes, offset, length);
     }
-
+    
     /**
+     * 字节数组转为字符串
+     * <p>
      * Constructs a new {@code String} by decoding the specified array of bytes
      * using the platform's default charset.  The length of the new {@code
      * String} is a function of the charset, and hence may not be equal to the
@@ -557,31 +510,32 @@ public final class String
      * java.nio.charset.CharsetDecoder} class should be used when more control
      * over the decoding process is required.
      *
-     * @param  bytes
-     *         The bytes to be decoded into characters
-     *
-     * @since  JDK1.1
+     * @param bytes The bytes to be decoded into characters
+     * @since JDK1.1
      */
     public String(byte bytes[]) {
         this(bytes, 0, bytes.length);
     }
-
+    
     /**
+     * StringBuffer 转为字符串
+     * <p>
      * Allocates a new string that contains the sequence of characters
      * currently contained in the string buffer argument. The contents of the
      * string buffer are copied; subsequent modification of the string buffer
      * does not affect the newly created string.
      *
-     * @param  buffer
-     *         A {@code StringBuffer}
+     * @param buffer A {@code StringBuffer}
      */
     public String(StringBuffer buffer) {
-        synchronized(buffer) {
+        synchronized (buffer) {
             this.value = Arrays.copyOf(buffer.getValue(), buffer.length());
         }
     }
-
+    
     /**
+     * StringBuilder 转为字符串
+     * <p>
      * Allocates a new string that contains the sequence of characters
      * currently contained in the string builder argument. The contents of the
      * string builder are copied; subsequent modification of the string builder
@@ -591,51 +545,54 @@ public final class String
      * StringBuilder}. Obtaining a string from a string builder via the {@code
      * toString} method is likely to run faster and is generally preferred.
      *
-     * @param   builder
-     *          A {@code StringBuilder}
-     *
-     * @since  1.5
+     * @param builder A {@code StringBuilder}
+     * @since 1.5
      */
     public String(StringBuilder builder) {
         this.value = Arrays.copyOf(builder.getValue(), builder.length());
     }
-
+    
     /*
-    * Package private constructor which shares value array for speed.
-    * this constructor is always expected to be called with share==true.
-    * a separate constructor is needed because we already have a public
-    * String(char[]) constructor that makes a copy of the given char[].
-    */
+     * Package private constructor which shares value array for speed.
+     * this constructor is always expected to be called with share==true.
+     * a separate constructor is needed because we already have a public
+     * String(char[]) constructor that makes a copy of the given char[].
+     */
     String(char[] value, boolean share) {
         // assert share : "unshared not supported";
         this.value = value;
     }
-
+    
     /**
+     * 获取字符串长度
+     * <p>
      * Returns the length of this string.
      * The length is equal to the number of <a href="Character.html#unicode">Unicode
      * code units</a> in the string.
      *
-     * @return  the length of the sequence of characters represented by this
-     *          object.
+     * @return the length of the sequence of characters represented by this
+     * object.
      */
     public int length() {
         return value.length;
     }
-
+    
     /**
+     * 判断字符串长度是否为0
+     * <p>
      * Returns {@code true} if, and only if, {@link #length()} is {@code 0}.
      *
      * @return {@code true} if {@link #length()} is {@code 0}, otherwise
      * {@code false}
-     *
      * @since 1.6
      */
     public boolean isEmpty() {
         return value.length == 0;
     }
-
+    
     /**
+     * 获取 字符串指定位置的值
+     * <p>
      * Returns the {@code char} value at the
      * specified index. An index ranges from {@code 0} to
      * {@code length() - 1}. The first {@code char} value of the sequence
@@ -646,12 +603,12 @@ public final class String
      * <a href="Character.html#unicode">surrogate</a>, the surrogate
      * value is returned.
      *
-     * @param      index   the index of the {@code char} value.
-     * @return     the {@code char} value at the specified index of this string.
-     *             The first {@code char} value is at index {@code 0}.
-     * @exception  IndexOutOfBoundsException  if the {@code index}
-     *             argument is negative or not less than the length of this
-     *             string.
+     * @param index the index of the {@code char} value.
+     * @return the {@code char} value at the specified index of this string.
+     * The first {@code char} value is at index {@code 0}.
+     * @throws IndexOutOfBoundsException if the {@code index}
+     *                                   argument is negative or not less than the length of this
+     *                                   string.
      */
     public char charAt(int index) {
         if ((index < 0) || (index >= value.length)) {
@@ -659,8 +616,10 @@ public final class String
         }
         return value[index];
     }
-
+    
     /**
+     * 返回指定位置的 Unicode
+     * <p>
      * Returns the character (Unicode code point) at the specified
      * index. The index refers to {@code char} values
      * (Unicode code units) and ranges from {@code 0} to
@@ -674,13 +633,13 @@ public final class String
      * corresponding to this surrogate pair is returned. Otherwise,
      * the {@code char} value at the given index is returned.
      *
-     * @param      index the index to the {@code char} values
-     * @return     the code point value of the character at the
-     *             {@code index}
-     * @exception  IndexOutOfBoundsException  if the {@code index}
-     *             argument is negative or not less than the length of this
-     *             string.
-     * @since      1.5
+     * @param index the index to the {@code char} values
+     * @return the code point value of the character at the
+     * {@code index}
+     * @throws IndexOutOfBoundsException if the {@code index}
+     *                                   argument is negative or not less than the length of this
+     *                                   string.
+     * @since 1.5
      */
     public int codePointAt(int index) {
         if ((index < 0) || (index >= value.length)) {
@@ -688,8 +647,10 @@ public final class String
         }
         return Character.codePointAtImpl(value, index, value.length);
     }
-
+    
     /**
+     * 指定位置之前的 Unicode
+     * <p>
      * Returns the character (Unicode code point) before the specified
      * index. The index refers to {@code char} values
      * (Unicode code units) and ranges from {@code 1} to {@link
@@ -704,12 +665,12 @@ public final class String
      * 1} is an unpaired low-surrogate or a high-surrogate, the
      * surrogate value is returned.
      *
-     * @param     index the index following the code point that should be returned
-     * @return    the Unicode code point value before the given index.
-     * @exception IndexOutOfBoundsException if the {@code index}
-     *            argument is less than 1 or greater than the length
-     *            of this string.
-     * @since     1.5
+     * @param index the index following the code point that should be returned
+     * @return the Unicode code point value before the given index.
+     * @throws IndexOutOfBoundsException if the {@code index}
+     *                                   argument is less than 1 or greater than the length
+     *                                   of this string.
+     * @since 1.5
      */
     public int codePointBefore(int index) {
         int i = index - 1;
@@ -718,8 +679,9 @@ public final class String
         }
         return Character.codePointBeforeImpl(value, index, 0);
     }
-
+    
     /**
+     * 返回 [指定位置, 结束位置] 的 Unicode
      * Returns the number of Unicode code points in the specified text
      * range of this {@code String}. The text range begins at the
      * specified {@code beginIndex} and extends to the
@@ -729,16 +691,16 @@ public final class String
      * the text range count as one code point each.
      *
      * @param beginIndex the index to the first {@code char} of
-     * the text range.
-     * @param endIndex the index after the last {@code char} of
-     * the text range.
+     *                   the text range.
+     * @param endIndex   the index after the last {@code char} of
+     *                   the text range.
      * @return the number of Unicode code points in the specified text
      * range
-     * @exception IndexOutOfBoundsException if the
-     * {@code beginIndex} is negative, or {@code endIndex}
-     * is larger than the length of this {@code String}, or
-     * {@code beginIndex} is larger than {@code endIndex}.
-     * @since  1.5
+     * @throws IndexOutOfBoundsException if the
+     *                                   {@code beginIndex} is negative, or {@code endIndex}
+     *                                   is larger than the length of this {@code String}, or
+     *                                   {@code beginIndex} is larger than {@code endIndex}.
+     * @since 1.5
      */
     public int codePointCount(int beginIndex, int endIndex) {
         if (beginIndex < 0 || endIndex > value.length || beginIndex > endIndex) {
@@ -746,25 +708,26 @@ public final class String
         }
         return Character.codePointCountImpl(value, beginIndex, endIndex - beginIndex);
     }
-
+    
     /**
+     * 获取指定位置偏移处的Unicode
      * Returns the index within this {@code String} that is
      * offset from the given {@code index} by
      * {@code codePointOffset} code points. Unpaired surrogates
      * within the text range given by {@code index} and
      * {@code codePointOffset} count as one code point each.
      *
-     * @param index the index to be offset
+     * @param index           the index to be offset
      * @param codePointOffset the offset in code points
      * @return the index within this {@code String}
-     * @exception IndexOutOfBoundsException if {@code index}
-     *   is negative or larger then the length of this
-     *   {@code String}, or if {@code codePointOffset} is positive
-     *   and the substring starting with {@code index} has fewer
-     *   than {@code codePointOffset} code points,
-     *   or if {@code codePointOffset} is negative and the substring
-     *   before {@code index} has fewer than the absolute value
-     *   of {@code codePointOffset} code points.
+     * @throws IndexOutOfBoundsException if {@code index}
+     *                                   is negative or larger then the length of this
+     *                                   {@code String}, or if {@code codePointOffset} is positive
+     *                                   and the substring starting with {@code index} has fewer
+     *                                   than {@code codePointOffset} code points,
+     *                                   or if {@code codePointOffset} is negative and the substring
+     *                                   before {@code index} has fewer than the absolute value
+     *                                   of {@code codePointOffset} code points.
      * @since 1.5
      */
     public int offsetByCodePoints(int index, int codePointOffset) {
@@ -774,7 +737,7 @@ public final class String
         return Character.offsetByCodePointsImpl(value, 0, value.length,
                 index, codePointOffset);
     }
-
+    
     /**
      * Copy characters from this string into dst starting at dstBegin.
      * This method doesn't perform any range checking.
@@ -782,8 +745,9 @@ public final class String
     void getChars(char dst[], int dstBegin) {
         System.arraycopy(value, 0, dst, dstBegin, value.length);
     }
-
+    
     /**
+     * 拷贝 chart 数组
      * Copies characters from this string into the destination character
      * array.
      * <p>
@@ -797,21 +761,21 @@ public final class String
      *     dstBegin + (srcEnd-srcBegin) - 1
      * </pre></blockquote>
      *
-     * @param      srcBegin   index of the first character in the string
-     *                        to copy.
-     * @param      srcEnd     index after the last character in the string
-     *                        to copy.
-     * @param      dst        the destination array.
-     * @param      dstBegin   the start offset in the destination array.
-     * @exception IndexOutOfBoundsException If any of the following
-     *            is true:
-     *            <ul><li>{@code srcBegin} is negative.
-     *            <li>{@code srcBegin} is greater than {@code srcEnd}
-     *            <li>{@code srcEnd} is greater than the length of this
-     *                string
-     *            <li>{@code dstBegin} is negative
-     *            <li>{@code dstBegin+(srcEnd-srcBegin)} is larger than
-     *                {@code dst.length}</ul>
+     * @param srcBegin index of the first character in the string
+     *                 to copy.
+     * @param srcEnd   index after the last character in the string
+     *                 to copy.
+     * @param dst      the destination array.
+     * @param dstBegin the start offset in the destination array.
+     * @throws IndexOutOfBoundsException If any of the following
+     *                                   is true:
+     *                                   <ul><li>{@code srcBegin} is negative.
+     *                                   <li>{@code srcBegin} is greater than {@code srcEnd}
+     *                                   <li>{@code srcEnd} is greater than the length of this
+     *                                   string
+     *                                   <li>{@code dstBegin} is negative
+     *                                   <li>{@code dstBegin+(srcEnd-srcBegin)} is larger than
+     *                                   {@code dst.length}</ul>
      */
     public void getChars(int srcBegin, int srcEnd, char dst[], int dstBegin) {
         if (srcBegin < 0) {
@@ -825,8 +789,9 @@ public final class String
         }
         System.arraycopy(value, srcBegin, dst, dstBegin, srcEnd - srcBegin);
     }
-
+    
     /**
+     * 拷贝 byte 数组形式
      * Copies characters from this string into the destination byte array. Each
      * byte receives the 8 low-order bits of the corresponding character. The
      * eight high-order bits of each character are not copied and do not
@@ -842,32 +807,22 @@ public final class String
      *     dstBegin + (srcEnd-srcBegin) - 1
      * </pre></blockquote>
      *
-     * @deprecated  This method does not properly convert characters into
+     * @param srcBegin Index of the first character in the string to copy
+     * @param srcEnd   Index after the last character in the string to copy
+     * @param dst      The destination array
+     * @param dstBegin The start offset in the destination array
+     * @throws IndexOutOfBoundsException If any of the following is true:
+     *                                   <ul>
+     *                                   <li> {@code srcBegin} is negative
+     *                                   <li> {@code srcBegin} is greater than {@code srcEnd}
+     *                                   <li> {@code srcEnd} is greater than the length of this String
+     *                                   <li> {@code dstBegin} is negative
+     *                                   <li> {@code dstBegin+(srcEnd-srcBegin)} is larger than {@code
+     *                                   dst.length}
+     *                                   </ul>
+     * @deprecated This method does not properly convert characters into
      * bytes.  As of JDK&nbsp;1.1, the preferred way to do this is via the
      * {@link #getBytes()} method, which uses the platform's default charset.
-     *
-     * @param  srcBegin
-     *         Index of the first character in the string to copy
-     *
-     * @param  srcEnd
-     *         Index after the last character in the string to copy
-     *
-     * @param  dst
-     *         The destination array
-     *
-     * @param  dstBegin
-     *         The start offset in the destination array
-     *
-     * @throws  IndexOutOfBoundsException
-     *          If any of the following is true:
-     *          <ul>
-     *            <li> {@code srcBegin} is negative
-     *            <li> {@code srcBegin} is greater than {@code srcEnd}
-     *            <li> {@code srcEnd} is greater than the length of this String
-     *            <li> {@code dstBegin} is negative
-     *            <li> {@code dstBegin+(srcEnd-srcBegin)} is larger than {@code
-     *                 dst.length}
-     *          </ul>
      */
     @Deprecated
     public void getBytes(int srcBegin, int srcEnd, byte dst[], int dstBegin) {
@@ -881,18 +836,19 @@ public final class String
             throw new StringIndexOutOfBoundsException(srcEnd - srcBegin);
         }
         Objects.requireNonNull(dst);
-
+        
         int j = dstBegin;
         int n = srcEnd;
         int i = srcBegin;
         char[] val = value;   /* avoid getfield opcode */
-
+        
         while (i < n) {
-            dst[j++] = (byte)val[i++];
+            dst[j++] = (byte) val[i++];
         }
     }
-
+    
     /**
+     * 转为指定字符格式的 byte 数组
      * Encodes this {@code String} into a sequence of bytes using the named
      * charset, storing the result into a new byte array.
      *
@@ -901,24 +857,20 @@ public final class String
      * java.nio.charset.CharsetEncoder} class should be used when more control
      * over the encoding process is required.
      *
-     * @param  charsetName
-     *         The name of a supported {@linkplain java.nio.charset.Charset
-     *         charset}
-     *
-     * @return  The resultant byte array
-     *
-     * @throws  UnsupportedEncodingException
-     *          If the named charset is not supported
-     *
-     * @since  JDK1.1
+     * @param charsetName The name of a supported {@linkplain java.nio.charset.Charset
+     *                    charset}
+     * @return The resultant byte array
+     * @throws UnsupportedEncodingException If the named charset is not supported
+     * @since JDK1.1
      */
     public byte[] getBytes(String charsetName)
             throws UnsupportedEncodingException {
         if (charsetName == null) throw new NullPointerException();
         return StringCoding.encode(charsetName, value, 0, value.length);
     }
-
+    
     /**
+     * 转为指定字符格式的 byte 数组
      * Encodes this {@code String} into a sequence of bytes using the given
      * {@linkplain java.nio.charset.Charset charset}, storing the result into a
      * new byte array.
@@ -928,20 +880,18 @@ public final class String
      * {@link java.nio.charset.CharsetEncoder} class should be used when more
      * control over the encoding process is required.
      *
-     * @param  charset
-     *         The {@linkplain java.nio.charset.Charset} to be used to encode
-     *         the {@code String}
-     *
-     * @return  The resultant byte array
-     *
-     * @since  1.6
+     * @param charset The {@linkplain java.nio.charset.Charset} to be used to encode
+     *                the {@code String}
+     * @return The resultant byte array
+     * @since 1.6
      */
     public byte[] getBytes(Charset charset) {
         if (charset == null) throw new NullPointerException();
         return StringCoding.encode(charset, value, 0, value.length);
     }
-
+    
     /**
+     * 转为 byte 数组
      * Encodes this {@code String} into a sequence of bytes using the
      * platform's default charset, storing the result into a new byte array.
      *
@@ -950,35 +900,32 @@ public final class String
      * java.nio.charset.CharsetEncoder} class should be used when more control
      * over the encoding process is required.
      *
-     * @return  The resultant byte array
-     *
-     * @since      JDK1.1
+     * @return The resultant byte array
+     * @since JDK1.1
      */
     public byte[] getBytes() {
         return StringCoding.encode(value, 0, value.length);
     }
-
+    
     /**
+     * 对象比较
      * Compares this string to the specified object.  The result is {@code
      * true} if and only if the argument is not {@code null} and is a {@code
      * String} object that represents the same sequence of characters as this
      * object.
      *
-     * @param  anObject
-     *         The object to compare this {@code String} against
-     *
-     * @return  {@code true} if the given object represents a {@code String}
-     *          equivalent to this string, {@code false} otherwise
-     *
-     * @see  #compareTo(String)
-     * @see  #equalsIgnoreCase(String)
+     * @param anObject The object to compare this {@code String} against
+     * @return {@code true} if the given object represents a {@code String}
+     * equivalent to this string, {@code false} otherwise
+     * @see #compareTo(String)
+     * @see #equalsIgnoreCase(String)
      */
     public boolean equals(Object anObject) {
         if (this == anObject) {
             return true;
         }
         if (anObject instanceof String) {
-            String anotherString = (String)anObject;
+            String anotherString = (String) anObject;
             int n = value.length;
             if (n == anotherString.value.length) {
                 char v1[] = value;
@@ -994,26 +941,24 @@ public final class String
         }
         return false;
     }
-
+    
     /**
+     * 字符比较
      * Compares this string to the specified {@code StringBuffer}.  The result
      * is {@code true} if and only if this {@code String} represents the same
      * sequence of characters as the specified {@code StringBuffer}. This method
      * synchronizes on the {@code StringBuffer}.
      *
-     * @param  sb
-     *         The {@code StringBuffer} to compare this {@code String} against
-     *
-     * @return  {@code true} if this {@code String} represents the same
-     *          sequence of characters as the specified {@code StringBuffer},
-     *          {@code false} otherwise
-     *
-     * @since  1.4
+     * @param sb The {@code StringBuffer} to compare this {@code String} against
+     * @return {@code true} if this {@code String} represents the same
+     * sequence of characters as the specified {@code StringBuffer},
+     * {@code false} otherwise
+     * @since 1.4
      */
     public boolean contentEquals(StringBuffer sb) {
-        return contentEquals((CharSequence)sb);
+        return contentEquals((CharSequence) sb);
     }
-
+    
     private boolean nonSyncContentEquals(AbstractStringBuilder sb) {
         char v1[] = value;
         char v2[] = sb.getValue();
@@ -1028,32 +973,30 @@ public final class String
         }
         return true;
     }
-
+    
     /**
+     * 字符串比较
      * Compares this string to the specified {@code CharSequence}.  The
      * result is {@code true} if and only if this {@code String} represents the
      * same sequence of char values as the specified sequence. Note that if the
      * {@code CharSequence} is a {@code StringBuffer} then the method
      * synchronizes on it.
      *
-     * @param  cs
-     *         The sequence to compare this {@code String} against
-     *
-     * @return  {@code true} if this {@code String} represents the same
-     *          sequence of char values as the specified sequence, {@code
-     *          false} otherwise
-     *
-     * @since  1.5
+     * @param cs The sequence to compare this {@code String} against
+     * @return {@code true} if this {@code String} represents the same
+     * sequence of char values as the specified sequence, {@code
+     * false} otherwise
+     * @since 1.5
      */
     public boolean contentEquals(CharSequence cs) {
         // Argument is a StringBuffer, StringBuilder
         if (cs instanceof AbstractStringBuilder) {
             if (cs instanceof StringBuffer) {
-                synchronized(cs) {
-                   return nonSyncContentEquals((AbstractStringBuilder)cs);
+                synchronized (cs) {
+                    return nonSyncContentEquals((AbstractStringBuilder) cs);
                 }
             } else {
-                return nonSyncContentEquals((AbstractStringBuilder)cs);
+                return nonSyncContentEquals((AbstractStringBuilder) cs);
             }
         }
         // Argument is a String
@@ -1073,8 +1016,9 @@ public final class String
         }
         return true;
     }
-
+    
     /**
+     * 忽略大小写的字符串比较
      * Compares this {@code String} to another {@code String}, ignoring case
      * considerations.  Two strings are considered equal ignoring case if they
      * are of the same length and corresponding characters in the two strings
@@ -1083,24 +1027,21 @@ public final class String
      * <p> Two characters {@code c1} and {@code c2} are considered the same
      * ignoring case if at least one of the following is true:
      * <ul>
-     *   <li> The two characters are the same (as compared by the
-     *        {@code ==} operator)
-     *   <li> Applying the method {@link
-     *        java.lang.Character#toUpperCase(char)} to each character
-     *        produces the same result
-     *   <li> Applying the method {@link
-     *        java.lang.Character#toLowerCase(char)} to each character
-     *        produces the same result
+     * <li> The two characters are the same (as compared by the
+     * {@code ==} operator)
+     * <li> Applying the method {@link
+     * java.lang.Character#toUpperCase(char)} to each character
+     * produces the same result
+     * <li> Applying the method {@link
+     * java.lang.Character#toLowerCase(char)} to each character
+     * produces the same result
      * </ul>
      *
-     * @param  anotherString
-     *         The {@code String} to compare this {@code String} against
-     *
-     * @return  {@code true} if the argument is not {@code null} and it
-     *          represents an equivalent {@code String} ignoring case; {@code
-     *          false} otherwise
-     *
-     * @see  #equals(Object)
+     * @param anotherString The {@code String} to compare this {@code String} against
+     * @return {@code true} if the argument is not {@code null} and it
+     * represents an equivalent {@code String} ignoring case; {@code
+     * false} otherwise
+     * @see #equals(Object)
      */
     public boolean equalsIgnoreCase(String anotherString) {
         return (this == anotherString) ? true
@@ -1108,8 +1049,11 @@ public final class String
                 && (anotherString.value.length == value.length)
                 && regionMatches(true, 0, anotherString, 0, value.length);
     }
-
+    
     /**
+     * 排序
+     * 1. 长度小
+     * 2. assii 码小
      * Compares two strings lexicographically.
      * The comparison is based on the Unicode value of each character in
      * the strings. The character sequence represented by this
@@ -1143,12 +1087,12 @@ public final class String
      * this.length()-anotherString.length()
      * </pre></blockquote>
      *
-     * @param   anotherString   the {@code String} to be compared.
-     * @return  the value {@code 0} if the argument string is equal to
-     *          this string; a value less than {@code 0} if this string
-     *          is lexicographically less than the string argument; and a
-     *          value greater than {@code 0} if this string is
-     *          lexicographically greater than the string argument.
+     * @param anotherString the {@code String} to be compared.
+     * @return the value {@code 0} if the argument string is equal to
+     * this string; a value less than {@code 0} if this string
+     * is lexicographically less than the string argument; and a
+     * value greater than {@code 0} if this string is
+     * lexicographically greater than the string argument.
      */
     public int compareTo(String anotherString) {
         int len1 = value.length;
@@ -1156,7 +1100,7 @@ public final class String
         int lim = Math.min(len1, len2);
         char v1[] = value;
         char v2[] = anotherString.value;
-
+        
         int k = 0;
         while (k < lim) {
             char c1 = v1[k];
@@ -1168,7 +1112,7 @@ public final class String
         }
         return len1 - len2;
     }
-
+    
     /**
      * A Comparator that orders {@code String} objects as by
      * {@code compareToIgnoreCase}. This comparator is serializable.
@@ -1178,16 +1122,17 @@ public final class String
      * The java.text package provides <em>Collators</em> to allow
      * locale-sensitive ordering.
      *
-     * @see     java.text.Collator#compare(String, String)
-     * @since   1.2
+     * @see java.text.Collator#compare(String, String)
+     * @since 1.2
      */
     public static final Comparator<String> CASE_INSENSITIVE_ORDER
-                                         = new CaseInsensitiveComparator();
+            = new CaseInsensitiveComparator();
+    
     private static class CaseInsensitiveComparator
             implements Comparator<String>, java.io.Serializable {
         // use serialVersionUID from JDK 1.2.2 for interoperability
         private static final long serialVersionUID = 8575799808933029326L;
-
+        
         public int compare(String s1, String s2) {
             int n1 = s1.length();
             int n2 = s2.length();
@@ -1210,12 +1155,18 @@ public final class String
             }
             return n1 - n2;
         }
-
-        /** Replaces the de-serialized object. */
-        private Object readResolve() { return CASE_INSENSITIVE_ORDER; }
+        
+        /**
+         * Replaces the de-serialized object.
+         */
+        private Object readResolve() {
+            return CASE_INSENSITIVE_ORDER;
+        }
     }
-
+    
     /**
+     * 忽略大小写的字符串比较
+     * <p>
      * Compares two strings lexicographically, ignoring case
      * differences. This method returns an integer whose sign is that of
      * calling {@code compareTo} with normalized versions of the strings
@@ -1228,18 +1179,19 @@ public final class String
      * The java.text package provides <em>collators</em> to allow
      * locale-sensitive ordering.
      *
-     * @param   str   the {@code String} to be compared.
-     * @return  a negative integer, zero, or a positive integer as the
-     *          specified String is greater than, equal to, or less
-     *          than this String, ignoring case considerations.
-     * @see     java.text.Collator#compare(String, String)
-     * @since   1.2
+     * @param str the {@code String} to be compared.
+     * @return a negative integer, zero, or a positive integer as the
+     * specified String is greater than, equal to, or less
+     * than this String, ignoring case considerations.
+     * @see java.text.Collator#compare(String, String)
+     * @since 1.2
      */
     public int compareToIgnoreCase(String str) {
         return CASE_INSENSITIVE_ORDER.compare(this, str);
     }
-
+    
     /**
+     * 范围比较
      * Tests if two string regions are equal.
      * <p>
      * A substring of this {@code String} object is compared to a substring
@@ -1262,25 +1214,25 @@ public final class String
      * <i>k</i>{@code )}
      * </ul>
      *
-     * @param   toffset   the starting offset of the subregion in this string.
-     * @param   other     the string argument.
-     * @param   ooffset   the starting offset of the subregion in the string
-     *                    argument.
-     * @param   len       the number of characters to compare.
-     * @return  {@code true} if the specified subregion of this string
-     *          exactly matches the specified subregion of the string argument;
-     *          {@code false} otherwise.
+     * @param toffset the starting offset of the subregion in this string.
+     * @param other   the string argument.
+     * @param ooffset the starting offset of the subregion in the string
+     *                argument.
+     * @param len     the number of characters to compare.
+     * @return {@code true} if the specified subregion of this string
+     * exactly matches the specified subregion of the string argument;
+     * {@code false} otherwise.
      */
     public boolean regionMatches(int toffset, String other, int ooffset,
-            int len) {
+                                 int len) {
         char ta[] = value;
         int to = toffset;
         char pa[] = other.value;
         int po = ooffset;
         // Note: toffset, ooffset, or len might be near -1>>>1.
         if ((ooffset < 0) || (toffset < 0)
-                || (toffset > (long)value.length - len)
-                || (ooffset > (long)other.value.length - len)) {
+                || (toffset > (long) value.length - len)
+                || (ooffset > (long) other.value.length - len)) {
             return false;
         }
         while (len-- > 0) {
@@ -1290,8 +1242,10 @@ public final class String
         }
         return true;
     }
-
+    
     /**
+     * 范围比较，忽略大小写
+     * <p>
      * Tests if two string regions are equal.
      * <p>
      * A substring of this {@code String} object is compared to a substring
@@ -1318,7 +1272,7 @@ public final class String
      * integer <i>k</i> less than {@code len} such that:
      * <blockquote><pre>
      * Character.toLowerCase(this.charAt(toffset+k)) !=
-     Character.toLowerCase(other.charAt(ooffset+k))
+     * Character.toLowerCase(other.charAt(ooffset+k))
      * </pre></blockquote>
      * and:
      * <blockquote><pre>
@@ -1327,30 +1281,30 @@ public final class String
      * </pre></blockquote>
      * </ul>
      *
-     * @param   ignoreCase   if {@code true}, ignore case when comparing
-     *                       characters.
-     * @param   toffset      the starting offset of the subregion in this
-     *                       string.
-     * @param   other        the string argument.
-     * @param   ooffset      the starting offset of the subregion in the string
-     *                       argument.
-     * @param   len          the number of characters to compare.
-     * @return  {@code true} if the specified subregion of this string
-     *          matches the specified subregion of the string argument;
-     *          {@code false} otherwise. Whether the matching is exact
-     *          or case insensitive depends on the {@code ignoreCase}
-     *          argument.
+     * @param ignoreCase if {@code true}, ignore case when comparing
+     *                   characters.
+     * @param toffset    the starting offset of the subregion in this
+     *                   string.
+     * @param other      the string argument.
+     * @param ooffset    the starting offset of the subregion in the string
+     *                   argument.
+     * @param len        the number of characters to compare.
+     * @return {@code true} if the specified subregion of this string
+     * matches the specified subregion of the string argument;
+     * {@code false} otherwise. Whether the matching is exact
+     * or case insensitive depends on the {@code ignoreCase}
+     * argument.
      */
     public boolean regionMatches(boolean ignoreCase, int toffset,
-            String other, int ooffset, int len) {
+                                 String other, int ooffset, int len) {
         char ta[] = value;
         int to = toffset;
         char pa[] = other.value;
         int po = ooffset;
         // Note: toffset, ooffset, or len might be near -1>>>1.
         if ((ooffset < 0) || (toffset < 0)
-                || (toffset > (long)value.length - len)
-                || (ooffset > (long)other.value.length - len)) {
+                || (toffset > (long) value.length - len)
+                || (ooffset > (long) other.value.length - len)) {
             return false;
         }
         while (len-- > 0) {
@@ -1381,21 +1335,23 @@ public final class String
         }
         return true;
     }
-
+    
     /**
+     * 前缀比较
+     * <p>
      * Tests if the substring of this string beginning at the
      * specified index starts with the specified prefix.
      *
-     * @param   prefix    the prefix.
-     * @param   toffset   where to begin looking in this string.
-     * @return  {@code true} if the character sequence represented by the
-     *          argument is a prefix of the substring of this object starting
-     *          at index {@code toffset}; {@code false} otherwise.
-     *          The result is {@code false} if {@code toffset} is
-     *          negative or greater than the length of this
-     *          {@code String} object; otherwise the result is the same
-     *          as the result of the expression
-     *          <pre>
+     * @param prefix  the prefix.
+     * @param toffset where to begin looking in this string.
+     * @return {@code true} if the character sequence represented by the
+     * argument is a prefix of the substring of this object starting
+     * at index {@code toffset}; {@code false} otherwise.
+     * The result is {@code false} if {@code toffset} is
+     * negative or greater than the length of this
+     * {@code String} object; otherwise the result is the same
+     * as the result of the expression
+     * <pre>
      *          this.substring(toffset).startsWith(prefix)
      *          </pre>
      */
@@ -1416,40 +1372,46 @@ public final class String
         }
         return true;
     }
-
+    
     /**
+     * 前缀比较
+     * <p>
      * Tests if this string starts with the specified prefix.
      *
-     * @param   prefix   the prefix.
-     * @return  {@code true} if the character sequence represented by the
-     *          argument is a prefix of the character sequence represented by
-     *          this string; {@code false} otherwise.
-     *          Note also that {@code true} will be returned if the
-     *          argument is an empty string or is equal to this
-     *          {@code String} object as determined by the
-     *          {@link #equals(Object)} method.
-     * @since   1. 0
+     * @param prefix the prefix.
+     * @return {@code true} if the character sequence represented by the
+     * argument is a prefix of the character sequence represented by
+     * this string; {@code false} otherwise.
+     * Note also that {@code true} will be returned if the
+     * argument is an empty string or is equal to this
+     * {@code String} object as determined by the
+     * {@link #equals(Object)} method.
+     * @since 1. 0
      */
     public boolean startsWith(String prefix) {
         return startsWith(prefix, 0);
     }
-
+    
     /**
+     * 后缀比较
+     * <p>
      * Tests if this string ends with the specified suffix.
      *
-     * @param   suffix   the suffix.
-     * @return  {@code true} if the character sequence represented by the
-     *          argument is a suffix of the character sequence represented by
-     *          this object; {@code false} otherwise. Note that the
-     *          result will be {@code true} if the argument is the
-     *          empty string or is equal to this {@code String} object
-     *          as determined by the {@link #equals(Object)} method.
+     * @param suffix the suffix.
+     * @return {@code true} if the character sequence represented by the
+     * argument is a suffix of the character sequence represented by
+     * this object; {@code false} otherwise. Note that the
+     * result will be {@code true} if the argument is the
+     * empty string or is equal to this {@code String} object
+     * as determined by the {@link #equals(Object)} method.
      */
     public boolean endsWith(String suffix) {
         return startsWith(suffix, value.length - suffix.value.length);
     }
-
+    
     /**
+     * hash码
+     * <p>
      * Returns a hash code for this string. The hash code for a
      * {@code String} object is computed as
      * <blockquote><pre>
@@ -1460,13 +1422,13 @@ public final class String
      * the string, and {@code ^} indicates exponentiation.
      * (The hash value of the empty string is zero.)
      *
-     * @return  a hash code value for this object.
+     * @return a hash code value for this object.
      */
     public int hashCode() {
         int h = hash;
         if (h == 0 && value.length > 0) {
             char val[] = value;
-
+            
             for (int i = 0; i < value.length; i++) {
                 h = 31 * h + val[i];
             }
@@ -1474,8 +1436,10 @@ public final class String
         }
         return h;
     }
-
+    
     /**
+     * 检索 Unicode 在字符串中的位置
+     * <p>
      * Returns the index within this string of the first occurrence of
      * the specified character. If a character with value
      * {@code ch} occurs in the character sequence represented by
@@ -1494,16 +1458,18 @@ public final class String
      * is true. In either case, if no such character occurs in this
      * string, then {@code -1} is returned.
      *
-     * @param   ch   a character (Unicode code point).
-     * @return  the index of the first occurrence of the character in the
-     *          character sequence represented by this object, or
-     *          {@code -1} if the character does not occur.
+     * @param ch a character (Unicode code point).
+     * @return the index of the first occurrence of the character in the
+     * character sequence represented by this object, or
+     * {@code -1} if the character does not occur.
      */
     public int indexOf(int ch) {
         return indexOf(ch, 0);
     }
-
+    
     /**
+     * 检索 Unicode 在字符串中的位置
+     * <p>
      * Returns the index within this string of the first occurrence of the
      * specified character, starting the search at the specified index.
      * <p>
@@ -1535,12 +1501,12 @@ public final class String
      * <p>All indices are specified in {@code char} values
      * (Unicode code units).
      *
-     * @param   ch          a character (Unicode code point).
-     * @param   fromIndex   the index to start the search from.
-     * @return  the index of the first occurrence of the character in the
-     *          character sequence represented by this object that is greater
-     *          than or equal to {@code fromIndex}, or {@code -1}
-     *          if the character does not occur.
+     * @param ch        a character (Unicode code point).
+     * @param fromIndex the index to start the search from.
+     * @return the index of the first occurrence of the character in the
+     * character sequence represented by this object that is greater
+     * than or equal to {@code fromIndex}, or {@code -1}
+     * if the character does not occur.
      */
     public int indexOf(int ch, int fromIndex) {
         final int max = value.length;
@@ -1550,7 +1516,7 @@ public final class String
             // Note: fromIndex might be near -1>>>1.
             return -1;
         }
-
+        
         if (ch < Character.MIN_SUPPLEMENTARY_CODE_POINT) {
             // handle most cases here (ch is a BMP code point or a
             // negative value (invalid code point))
@@ -1565,7 +1531,7 @@ public final class String
             return indexOfSupplementary(ch, fromIndex);
         }
     }
-
+    
     /**
      * Handles (rare) calls of indexOf with a supplementary character.
      */
@@ -1583,8 +1549,10 @@ public final class String
         }
         return -1;
     }
-
+    
     /**
+     * 检索指定 Unicode 的倒数位置
+     * <p>
      * Returns the index within this string of the last occurrence of
      * the specified character. For values of {@code ch} in the
      * range from 0 to 0xFFFF (inclusive), the index (in Unicode code
@@ -1602,16 +1570,18 @@ public final class String
      * {@code String} is searched backwards starting at the last
      * character.
      *
-     * @param   ch   a character (Unicode code point).
-     * @return  the index of the last occurrence of the character in the
-     *          character sequence represented by this object, or
-     *          {@code -1} if the character does not occur.
+     * @param ch a character (Unicode code point).
+     * @return the index of the last occurrence of the character in the
+     * character sequence represented by this object, or
+     * {@code -1} if the character does not occur.
      */
     public int lastIndexOf(int ch) {
         return lastIndexOf(ch, value.length - 1);
     }
-
+    
     /**
+     * 检索指定 Unicode 的倒数位置
+     * <p>
      * Returns the index within this string of the last occurrence of
      * the specified character, searching backward starting at the
      * specified index. For values of {@code ch} in the range
@@ -1632,18 +1602,18 @@ public final class String
      * <p>All indices are specified in {@code char} values
      * (Unicode code units).
      *
-     * @param   ch          a character (Unicode code point).
-     * @param   fromIndex   the index to start the search from. There is no
-     *          restriction on the value of {@code fromIndex}. If it is
-     *          greater than or equal to the length of this string, it has
-     *          the same effect as if it were equal to one less than the
-     *          length of this string: this entire string may be searched.
-     *          If it is negative, it has the same effect as if it were -1:
-     *          -1 is returned.
-     * @return  the index of the last occurrence of the character in the
-     *          character sequence represented by this object that is less
-     *          than or equal to {@code fromIndex}, or {@code -1}
-     *          if the character does not occur before that point.
+     * @param ch        a character (Unicode code point).
+     * @param fromIndex the index to start the search from. There is no
+     *                  restriction on the value of {@code fromIndex}. If it is
+     *                  greater than or equal to the length of this string, it has
+     *                  the same effect as if it were equal to one less than the
+     *                  length of this string: this entire string may be searched.
+     *                  If it is negative, it has the same effect as if it were -1:
+     *                  -1 is returned.
+     * @return the index of the last occurrence of the character in the
+     * character sequence represented by this object that is less
+     * than or equal to {@code fromIndex}, or {@code -1}
+     * if the character does not occur before that point.
      */
     public int lastIndexOf(int ch, int fromIndex) {
         if (ch < Character.MIN_SUPPLEMENTARY_CODE_POINT) {
@@ -1661,7 +1631,7 @@ public final class String
             return lastIndexOfSupplementary(ch, fromIndex);
         }
     }
-
+    
     /**
      * Handles (rare) calls of lastIndexOf with a supplementary character.
      */
@@ -1679,8 +1649,10 @@ public final class String
         }
         return -1;
     }
-
+    
     /**
+     * 检索指定 字符串 的位置
+     * <p>
      * Returns the index within this string of the first occurrence of the
      * specified substring.
      *
@@ -1690,15 +1662,17 @@ public final class String
      * </pre></blockquote>
      * If no such value of <i>k</i> exists, then {@code -1} is returned.
      *
-     * @param   str   the substring to search for.
-     * @return  the index of the first occurrence of the specified substring,
-     *          or {@code -1} if there is no such occurrence.
+     * @param str the substring to search for.
+     * @return the index of the first occurrence of the specified substring,
+     * or {@code -1} if there is no such occurrence.
      */
     public int indexOf(String str) {
         return indexOf(str, 0);
     }
-
+    
     /**
+     * 检索指定 字符串 的位置
+     * <p>
      * Returns the index within this string of the first occurrence of the
      * specified substring, starting at the specified index.
      *
@@ -1708,51 +1682,55 @@ public final class String
      * </pre></blockquote>
      * If no such value of <i>k</i> exists, then {@code -1} is returned.
      *
-     * @param   str         the substring to search for.
-     * @param   fromIndex   the index from which to start the search.
-     * @return  the index of the first occurrence of the specified substring,
-     *          starting at the specified index,
-     *          or {@code -1} if there is no such occurrence.
+     * @param str       the substring to search for.
+     * @param fromIndex the index from which to start the search.
+     * @return the index of the first occurrence of the specified substring,
+     * starting at the specified index,
+     * or {@code -1} if there is no such occurrence.
      */
     public int indexOf(String str, int fromIndex) {
         return indexOf(value, 0, value.length,
                 str.value, 0, str.value.length, fromIndex);
     }
-
+    
     /**
+     * 检索指定 字符段 在 目标字符串 的位置
+     * <p>
      * Code shared by String and AbstractStringBuilder to do searches. The
      * source is the character array being searched, and the target
      * is the string being searched for.
      *
-     * @param   source       the characters being searched.
-     * @param   sourceOffset offset of the source string.
-     * @param   sourceCount  count of the source string.
-     * @param   target       the characters being searched for.
-     * @param   fromIndex    the index to begin searching from.
+     * @param source       the characters being searched.
+     * @param sourceOffset offset of the source string.
+     * @param sourceCount  count of the source string.
+     * @param target       the characters being searched for.
+     * @param fromIndex    the index to begin searching from.
      */
     static int indexOf(char[] source, int sourceOffset, int sourceCount,
-            String target, int fromIndex) {
+                       String target, int fromIndex) {
         return indexOf(source, sourceOffset, sourceCount,
-                       target.value, 0, target.value.length,
-                       fromIndex);
+                target.value, 0, target.value.length,
+                fromIndex);
     }
-
+    
     /**
+     * 检索指定 字符段 在 目标字符串 的位置
+     * <p>
      * Code shared by String and StringBuffer to do searches. The
      * source is the character array being searched, and the target
      * is the string being searched for.
      *
-     * @param   source       the characters being searched.
-     * @param   sourceOffset offset of the source string.
-     * @param   sourceCount  count of the source string.
-     * @param   target       the characters being searched for.
-     * @param   targetOffset offset of the target string.
-     * @param   targetCount  count of the target string.
-     * @param   fromIndex    the index to begin searching from.
+     * @param source       the characters being searched.
+     * @param sourceOffset offset of the source string.
+     * @param sourceCount  count of the source string.
+     * @param target       the characters being searched for.
+     * @param targetOffset offset of the target string.
+     * @param targetCount  count of the target string.
+     * @param fromIndex    the index to begin searching from.
      */
     static int indexOf(char[] source, int sourceOffset, int sourceCount,
-            char[] target, int targetOffset, int targetCount,
-            int fromIndex) {
+                       char[] target, int targetOffset, int targetCount,
+                       int fromIndex) {
         if (fromIndex >= sourceCount) {
             return (targetCount == 0 ? sourceCount : -1);
         }
@@ -1762,23 +1740,24 @@ public final class String
         if (targetCount == 0) {
             return fromIndex;
         }
-
+        
         char first = target[targetOffset];
         int max = sourceOffset + (sourceCount - targetCount);
-
+        
         for (int i = sourceOffset + fromIndex; i <= max; i++) {
             /* Look for first character. */
             if (source[i] != first) {
-                while (++i <= max && source[i] != first);
+                while (++i <= max && source[i] != first) ;
             }
-
+            
             /* Found first character, now look at the rest of v2 */
             if (i <= max) {
                 int j = i + 1;
                 int end = j + targetCount - 1;
                 for (int k = targetOffset + 1; j < end && source[j]
-                        == target[k]; j++, k++);
-
+                        == target[k]; j++, k++)
+                    ;
+                
                 if (j == end) {
                     /* Found whole string. */
                     return i - sourceOffset;
@@ -1787,8 +1766,10 @@ public final class String
         }
         return -1;
     }
-
+    
     /**
+     * 检索指定 字符段 倒数位置
+     * <p>
      * Returns the index within this string of the last occurrence of the
      * specified substring.  The last occurrence of the empty string ""
      * is considered to occur at the index value {@code this.length()}.
@@ -1799,15 +1780,17 @@ public final class String
      * </pre></blockquote>
      * If no such value of <i>k</i> exists, then {@code -1} is returned.
      *
-     * @param   str   the substring to search for.
-     * @return  the index of the last occurrence of the specified substring,
-     *          or {@code -1} if there is no such occurrence.
+     * @param str the substring to search for.
+     * @return the index of the last occurrence of the specified substring,
+     * or {@code -1} if there is no such occurrence.
      */
     public int lastIndexOf(String str) {
         return lastIndexOf(str, value.length);
     }
-
+    
     /**
+     * 检索指定 字符段 倒数位置
+     * <p>
      * Returns the index within this string of the last occurrence of the
      * specified substring, searching backward starting at the specified index.
      *
@@ -1817,51 +1800,55 @@ public final class String
      * </pre></blockquote>
      * If no such value of <i>k</i> exists, then {@code -1} is returned.
      *
-     * @param   str         the substring to search for.
-     * @param   fromIndex   the index to start the search from.
-     * @return  the index of the last occurrence of the specified substring,
-     *          searching backward from the specified index,
-     *          or {@code -1} if there is no such occurrence.
+     * @param str       the substring to search for.
+     * @param fromIndex the index to start the search from.
+     * @return the index of the last occurrence of the specified substring,
+     * searching backward from the specified index,
+     * or {@code -1} if there is no such occurrence.
      */
     public int lastIndexOf(String str, int fromIndex) {
         return lastIndexOf(value, 0, value.length,
                 str.value, 0, str.value.length, fromIndex);
     }
-
+    
     /**
+     * 检索指定 字符段 倒数位置
+     * <p>
      * Code shared by String and AbstractStringBuilder to do searches. The
      * source is the character array being searched, and the target
      * is the string being searched for.
      *
-     * @param   source       the characters being searched.
-     * @param   sourceOffset offset of the source string.
-     * @param   sourceCount  count of the source string.
-     * @param   target       the characters being searched for.
-     * @param   fromIndex    the index to begin searching from.
+     * @param source       the characters being searched.
+     * @param sourceOffset offset of the source string.
+     * @param sourceCount  count of the source string.
+     * @param target       the characters being searched for.
+     * @param fromIndex    the index to begin searching from.
      */
     static int lastIndexOf(char[] source, int sourceOffset, int sourceCount,
-            String target, int fromIndex) {
+                           String target, int fromIndex) {
         return lastIndexOf(source, sourceOffset, sourceCount,
-                       target.value, 0, target.value.length,
-                       fromIndex);
+                target.value, 0, target.value.length,
+                fromIndex);
     }
-
+    
     /**
+     * 检索指定 字符段 倒数位置
+     * <p>
      * Code shared by String and StringBuffer to do searches. The
      * source is the character array being searched, and the target
      * is the string being searched for.
      *
-     * @param   source       the characters being searched.
-     * @param   sourceOffset offset of the source string.
-     * @param   sourceCount  count of the source string.
-     * @param   target       the characters being searched for.
-     * @param   targetOffset offset of the target string.
-     * @param   targetCount  count of the target string.
-     * @param   fromIndex    the index to begin searching from.
+     * @param source       the characters being searched.
+     * @param sourceOffset offset of the source string.
+     * @param sourceCount  count of the source string.
+     * @param target       the characters being searched for.
+     * @param targetOffset offset of the target string.
+     * @param targetCount  count of the target string.
+     * @param fromIndex    the index to begin searching from.
      */
     static int lastIndexOf(char[] source, int sourceOffset, int sourceCount,
-            char[] target, int targetOffset, int targetCount,
-            int fromIndex) {
+                           char[] target, int targetOffset, int targetCount,
+                           int fromIndex) {
         /*
          * Check arguments; return immediately where possible. For
          * consistency, don't check for null str.
@@ -1877,13 +1864,13 @@ public final class String
         if (targetCount == 0) {
             return fromIndex;
         }
-
+        
         int strLastIndex = targetOffset + targetCount - 1;
         char strLastChar = target[strLastIndex];
         int min = sourceOffset + targetCount - 1;
         int i = min + fromIndex;
-
-    startSearchForLastChar:
+        
+        startSearchForLastChar:
         while (true) {
             while (i >= min && source[i] != strLastChar) {
                 i--;
@@ -1894,7 +1881,7 @@ public final class String
             int j = i - 1;
             int start = j - (targetCount - 1);
             int k = strLastIndex - 1;
-
+            
             while (j > start) {
                 if (source[j--] != target[k--]) {
                     i--;
@@ -1904,8 +1891,10 @@ public final class String
             return start - sourceOffset + 1;
         }
     }
-
+    
     /**
+     * 截取子字符串
+     * <p>
      * Returns a string that is a substring of this string. The
      * substring begins with the character at the specified index and
      * extends to the end of this string. <p>
@@ -1916,11 +1905,11 @@ public final class String
      * "emptiness".substring(9) returns "" (an empty string)
      * </pre></blockquote>
      *
-     * @param      beginIndex   the beginning index, inclusive.
-     * @return     the specified substring.
-     * @exception  IndexOutOfBoundsException  if
-     *             {@code beginIndex} is negative or larger than the
-     *             length of this {@code String} object.
+     * @param beginIndex the beginning index, inclusive.
+     * @return the specified substring.
+     * @throws IndexOutOfBoundsException if
+     *                                   {@code beginIndex} is negative or larger than the
+     *                                   length of this {@code String} object.
      */
     public String substring(int beginIndex) {
         if (beginIndex < 0) {
@@ -1932,8 +1921,10 @@ public final class String
         }
         return (beginIndex == 0) ? this : new String(value, beginIndex, subLen);
     }
-
+    
     /**
+     * 截取子字符串
+     * <p>
      * Returns a string that is a substring of this string. The
      * substring begins at the specified {@code beginIndex} and
      * extends to the character at index {@code endIndex - 1}.
@@ -1945,15 +1936,15 @@ public final class String
      * "smiles".substring(1, 5) returns "mile"
      * </pre></blockquote>
      *
-     * @param      beginIndex   the beginning index, inclusive.
-     * @param      endIndex     the ending index, exclusive.
-     * @return     the specified substring.
-     * @exception  IndexOutOfBoundsException  if the
-     *             {@code beginIndex} is negative, or
-     *             {@code endIndex} is larger than the length of
-     *             this {@code String} object, or
-     *             {@code beginIndex} is larger than
-     *             {@code endIndex}.
+     * @param beginIndex the beginning index, inclusive.
+     * @param endIndex   the ending index, exclusive.
+     * @return the specified substring.
+     * @throws IndexOutOfBoundsException if the
+     *                                   {@code beginIndex} is negative, or
+     *                                   {@code endIndex} is larger than the length of
+     *                                   this {@code String} object, or
+     *                                   {@code beginIndex} is larger than
+     *                                   {@code endIndex}.
      */
     public String substring(int beginIndex, int endIndex) {
         if (beginIndex < 0) {
@@ -1969,41 +1960,40 @@ public final class String
         return ((beginIndex == 0) && (endIndex == value.length)) ? this
                 : new String(value, beginIndex, subLen);
     }
-
+    
     /**
+     * 截取子字符串
+     * <p>
      * Returns a character sequence that is a subsequence of this sequence.
      *
      * <p> An invocation of this method of the form
      *
      * <blockquote><pre>
      * str.subSequence(begin,&nbsp;end)</pre></blockquote>
-     *
+     * <p>
      * behaves in exactly the same way as the invocation
      *
      * <blockquote><pre>
      * str.substring(begin,&nbsp;end)</pre></blockquote>
      *
-     * @apiNote
-     * This method is defined so that the {@code String} class can implement
+     * @param beginIndex the begin index, inclusive.
+     * @param endIndex   the end index, exclusive.
+     * @return the specified subsequence.
+     * @throws IndexOutOfBoundsException if {@code beginIndex} or {@code endIndex} is negative,
+     *                                   if {@code endIndex} is greater than {@code length()},
+     *                                   or if {@code beginIndex} is greater than {@code endIndex}
+     * @apiNote This method is defined so that the {@code String} class can implement
      * the {@link CharSequence} interface.
-     *
-     * @param   beginIndex   the begin index, inclusive.
-     * @param   endIndex     the end index, exclusive.
-     * @return  the specified subsequence.
-     *
-     * @throws  IndexOutOfBoundsException
-     *          if {@code beginIndex} or {@code endIndex} is negative,
-     *          if {@code endIndex} is greater than {@code length()},
-     *          or if {@code beginIndex} is greater than {@code endIndex}
-     *
-     * @since 1.4
      * @spec JSR-51
+     * @since 1.4
      */
     public CharSequence subSequence(int beginIndex, int endIndex) {
         return this.substring(beginIndex, endIndex);
     }
-
+    
     /**
+     * 连接字符串
+     * <p>
      * Concatenates the specified string to the end of this string.
      * <p>
      * If the length of the argument string is {@code 0}, then this
@@ -2018,10 +2008,10 @@ public final class String
      * "to".concat("get").concat("her") returns "together"
      * </pre></blockquote>
      *
-     * @param   str   the {@code String} that is concatenated to the end
-     *                of this {@code String}.
-     * @return  a string that represents the concatenation of this object's
-     *          characters followed by the string argument's characters.
+     * @param str the {@code String} that is concatenated to the end
+     *            of this {@code String}.
+     * @return a string that represents the concatenation of this object's
+     * characters followed by the string argument's characters.
      */
     public String concat(String str) {
         int otherLen = str.length();
@@ -2033,8 +2023,10 @@ public final class String
         str.getChars(buf, len);
         return new String(buf, true);
     }
-
+    
     /**
+     * 替换字符串
+     * <p>
      * Returns a string resulting from replacing all occurrences of
      * {@code oldChar} in this string with {@code newChar}.
      * <p>
@@ -2058,22 +2050,24 @@ public final class String
      * "JonL".replace('q', 'x') returns "JonL" (no change)
      * </pre></blockquote>
      *
-     * @param   oldChar   the old character.
-     * @param   newChar   the new character.
-     * @return  a string derived from this string by replacing every
-     *          occurrence of {@code oldChar} with {@code newChar}.
+     * @param oldChar the old character.
+     * @param newChar the new character.
+     * @return a string derived from this string by replacing every
+     * occurrence of {@code oldChar} with {@code newChar}.
      */
     public String replace(char oldChar, char newChar) {
         if (oldChar != newChar) {
             int len = value.length;
             int i = -1;
             char[] val = value; /* avoid getfield opcode */
-
+            
+            // 1. 替换指定字符串
             while (++i < len) {
                 if (val[i] == oldChar) {
                     break;
                 }
             }
+            // 2. 如果字符串缩短则重新赋值
             if (i < len) {
                 char buf[] = new char[len];
                 for (int j = 0; j < i; j++) {
@@ -2089,8 +2083,9 @@ public final class String
         }
         return this;
     }
-
+    
     /**
+     * 正则匹配
      * Tells whether or not this string matches the given <a
      * href="../util/regex/Pattern.html#sum">regular expression</a>.
      *
@@ -2099,29 +2094,25 @@ public final class String
      * same result as the expression
      *
      * <blockquote>
-     * {@link java.util.regex.Pattern}.{@link java.util.regex.Pattern#matches(String,CharSequence)
+     * {@link java.util.regex.Pattern}.{@link java.util.regex.Pattern#matches(String, CharSequence)
      * matches(<i>regex</i>, <i>str</i>)}
      * </blockquote>
      *
-     * @param   regex
-     *          the regular expression to which this string is to be matched
-     *
-     * @return  {@code true} if, and only if, this string matches the
-     *          given regular expression
-     *
-     * @throws  PatternSyntaxException
-     *          if the regular expression's syntax is invalid
-     *
-     * @see java.util.regex.Pattern
-     *
-     * @since 1.4
+     * @param regex the regular expression to which this string is to be matched
+     * @return {@code true} if, and only if, this string matches the
+     * given regular expression
+     * @throws PatternSyntaxException if the regular expression's syntax is invalid
      * @spec JSR-51
+     * @see java.util.regex.Pattern
+     * @since 1.4
      */
     public boolean matches(String regex) {
         return Pattern.matches(regex, this);
     }
-
+    
     /**
+     * 包含判定
+     * <p>
      * Returns true if and only if this string contains the specified
      * sequence of char values.
      *
@@ -2132,8 +2123,10 @@ public final class String
     public boolean contains(CharSequence s) {
         return indexOf(s.toString()) > -1;
     }
-
+    
     /**
+     * 替换第一个匹配的字符串
+     * <p>
      * Replaces the first substring of this string that matches the given <a
      * href="../util/regex/Pattern.html#sum">regular expression</a> with the
      * given replacement.
@@ -2151,7 +2144,7 @@ public final class String
      * </code>
      * </blockquote>
      *
-     *<p>
+     * <p>
      * Note that backslashes ({@code \}) and dollar signs ({@code $}) in the
      * replacement string may cause the results to be different than if it were
      * being treated as a literal replacement string; see
@@ -2159,26 +2152,21 @@ public final class String
      * Use {@link java.util.regex.Matcher#quoteReplacement} to suppress the special
      * meaning of these characters, if desired.
      *
-     * @param   regex
-     *          the regular expression to which this string is to be matched
-     * @param   replacement
-     *          the string to be substituted for the first match
-     *
-     * @return  The resulting {@code String}
-     *
-     * @throws  PatternSyntaxException
-     *          if the regular expression's syntax is invalid
-     *
-     * @see java.util.regex.Pattern
-     *
-     * @since 1.4
+     * @param regex       the regular expression to which this string is to be matched
+     * @param replacement the string to be substituted for the first match
+     * @return The resulting {@code String}
+     * @throws PatternSyntaxException if the regular expression's syntax is invalid
      * @spec JSR-51
+     * @see java.util.regex.Pattern
+     * @since 1.4
      */
     public String replaceFirst(String regex, String replacement) {
         return Pattern.compile(regex).matcher(this).replaceFirst(replacement);
     }
-
+    
     /**
+     * 替换所有匹配的值
+     * <p>
      * Replaces each substring of this string that matches the given <a
      * href="../util/regex/Pattern.html#sum">regular expression</a> with the
      * given replacement.
@@ -2196,7 +2184,7 @@ public final class String
      * </code>
      * </blockquote>
      *
-     *<p>
+     * <p>
      * Note that backslashes ({@code \}) and dollar signs ({@code $}) in the
      * replacement string may cause the results to be different than if it were
      * being treated as a literal replacement string; see
@@ -2204,43 +2192,40 @@ public final class String
      * Use {@link java.util.regex.Matcher#quoteReplacement} to suppress the special
      * meaning of these characters, if desired.
      *
-     * @param   regex
-     *          the regular expression to which this string is to be matched
-     * @param   replacement
-     *          the string to be substituted for each match
-     *
-     * @return  The resulting {@code String}
-     *
-     * @throws  PatternSyntaxException
-     *          if the regular expression's syntax is invalid
-     *
-     * @see java.util.regex.Pattern
-     *
-     * @since 1.4
+     * @param regex       the regular expression to which this string is to be matched
+     * @param replacement the string to be substituted for each match
+     * @return The resulting {@code String}
+     * @throws PatternSyntaxException if the regular expression's syntax is invalid
      * @spec JSR-51
+     * @see java.util.regex.Pattern
+     * @since 1.4
      */
     public String replaceAll(String regex, String replacement) {
         return Pattern.compile(regex).matcher(this).replaceAll(replacement);
     }
-
+    
     /**
+     * 替换值
+     * <p>
      * Replaces each substring of this string that matches the literal target
      * sequence with the specified literal replacement sequence. The
      * replacement proceeds from the beginning of the string to the end, for
      * example, replacing "aa" with "b" in the string "aaa" will result in
      * "ba" rather than "ab".
      *
-     * @param  target The sequence of char values to be replaced
-     * @param  replacement The replacement sequence of char values
-     * @return  The resulting string
+     * @param target      The sequence of char values to be replaced
+     * @param replacement The replacement sequence of char values
+     * @return The resulting string
      * @since 1.5
      */
     public String replace(CharSequence target, CharSequence replacement) {
         return Pattern.compile(target.toString(), Pattern.LITERAL).matcher(
                 this).replaceAll(Matcher.quoteReplacement(replacement.toString()));
     }
-
+    
     /**
+     * 切割字符串
+     * <p>
      * Splits this string around matches of the given
      * <a href="../util/regex/Pattern.html#sum">regular expression</a>.
      *
@@ -2272,28 +2257,28 @@ public final class String
      *
      * <blockquote><table cellpadding=1 cellspacing=0 summary="Split example showing regex, limit, and result">
      * <tr>
-     *     <th>Regex</th>
-     *     <th>Limit</th>
-     *     <th>Result</th>
+     * <th>Regex</th>
+     * <th>Limit</th>
+     * <th>Result</th>
      * </tr>
      * <tr><td align=center>:</td>
-     *     <td align=center>2</td>
-     *     <td>{@code { "boo", "and:foo" }}</td></tr>
+     * <td align=center>2</td>
+     * <td>{@code { "boo", "and:foo" }}</td></tr>
      * <tr><td align=center>:</td>
-     *     <td align=center>5</td>
-     *     <td>{@code { "boo", "and", "foo" }}</td></tr>
+     * <td align=center>5</td>
+     * <td>{@code { "boo", "and", "foo" }}</td></tr>
      * <tr><td align=center>:</td>
-     *     <td align=center>-2</td>
-     *     <td>{@code { "boo", "and", "foo" }}</td></tr>
+     * <td align=center>-2</td>
+     * <td>{@code { "boo", "and", "foo" }}</td></tr>
      * <tr><td align=center>o</td>
-     *     <td align=center>5</td>
-     *     <td>{@code { "b", "", ":and:f", "", "" }}</td></tr>
+     * <td align=center>5</td>
+     * <td>{@code { "b", "", ":and:f", "", "" }}</td></tr>
      * <tr><td align=center>o</td>
-     *     <td align=center>-2</td>
-     *     <td>{@code { "b", "", ":and:f", "", "" }}</td></tr>
+     * <td align=center>-2</td>
+     * <td>{@code { "b", "", ":and:f", "", "" }}</td></tr>
      * <tr><td align=center>o</td>
-     *     <td align=center>0</td>
-     *     <td>{@code { "b", "", ":and:f" }}</td></tr>
+     * <td align=center>0</td>
+     * <td>{@code { "b", "", ":and:f" }}</td></tr>
      * </table></blockquote>
      *
      * <p> An invocation of this method of the form
@@ -2304,27 +2289,18 @@ public final class String
      * <code>
      * {@link java.util.regex.Pattern}.{@link
      * java.util.regex.Pattern#compile compile}(<i>regex</i>).{@link
-     * java.util.regex.Pattern#split(java.lang.CharSequence,int) split}(<i>str</i>,&nbsp;<i>n</i>)
+     * java.util.regex.Pattern#split(java.lang.CharSequence, int) split}(<i>str</i>,&nbsp;<i>n</i>)
      * </code>
      * </blockquote>
      *
-     *
-     * @param  regex
-     *         the delimiting regular expression
-     *
-     * @param  limit
-     *         the result threshold, as described above
-     *
-     * @return  the array of strings computed by splitting this string
-     *          around matches of the given regular expression
-     *
-     * @throws  PatternSyntaxException
-     *          if the regular expression's syntax is invalid
-     *
-     * @see java.util.regex.Pattern
-     *
-     * @since 1.4
+     * @param regex the delimiting regular expression
+     * @param limit the result threshold, as described above
+     * @return the array of strings computed by splitting this string
+     * around matches of the given regular expression
+     * @throws PatternSyntaxException if the regular expression's syntax is invalid
      * @spec JSR-51
+     * @see java.util.regex.Pattern
+     * @since 1.4
      */
     public String[] split(String regex, int limit) {
         /* fastpath if the regex is a
@@ -2335,15 +2311,14 @@ public final class String
          */
         char ch = 0;
         if (((regex.value.length == 1 &&
-             ".$|()[{^?*+\\".indexOf(ch = regex.charAt(0)) == -1) ||
-             (regex.length() == 2 &&
-              regex.charAt(0) == '\\' &&
-              (((ch = regex.charAt(1))-'0')|('9'-ch)) < 0 &&
-              ((ch-'a')|('z'-ch)) < 0 &&
-              ((ch-'A')|('Z'-ch)) < 0)) &&
-            (ch < Character.MIN_HIGH_SURROGATE ||
-             ch > Character.MAX_LOW_SURROGATE))
-        {
+                ".$|()[{^?*+\\".indexOf(ch = regex.charAt(0)) == -1) ||
+                (regex.length() == 2 &&
+                        regex.charAt(0) == '\\' &&
+                        (((ch = regex.charAt(1)) - '0') | ('9' - ch)) < 0 &&
+                        ((ch - 'a') | ('z' - ch)) < 0 &&
+                        ((ch - 'A') | ('Z' - ch)) < 0)) &&
+                (ch < Character.MIN_HIGH_SURROGATE ||
+                        ch > Character.MAX_LOW_SURROGATE)) {
             int off = 0;
             int next = 0;
             boolean limited = limit > 0;
@@ -2362,11 +2337,11 @@ public final class String
             // If no match was found, return this
             if (off == 0)
                 return new String[]{this};
-
+            
             // Add remaining segment
             if (!limited || list.size() < limit)
                 list.add(substring(off, value.length));
-
+            
             // Construct result
             int resultSize = list.size();
             if (limit == 0) {
@@ -2379,8 +2354,10 @@ public final class String
         }
         return Pattern.compile(regex).split(this, limit);
     }
-
+    
     /**
+     * 切割字符串
+     * <p>
      * Splits this string around matches of the given <a
      * href="../util/regex/Pattern.html#sum">regular expression</a>.
      *
@@ -2394,35 +2371,30 @@ public final class String
      *
      * <blockquote><table cellpadding=1 cellspacing=0 summary="Split examples showing regex and result">
      * <tr>
-     *  <th>Regex</th>
-     *  <th>Result</th>
+     * <th>Regex</th>
+     * <th>Result</th>
      * </tr>
      * <tr><td align=center>:</td>
-     *     <td>{@code { "boo", "and", "foo" }}</td></tr>
+     * <td>{@code { "boo", "and", "foo" }}</td></tr>
      * <tr><td align=center>o</td>
-     *     <td>{@code { "b", "", ":and:f" }}</td></tr>
+     * <td>{@code { "b", "", ":and:f" }}</td></tr>
      * </table></blockquote>
      *
-     *
-     * @param  regex
-     *         the delimiting regular expression
-     *
-     * @return  the array of strings computed by splitting this string
-     *          around matches of the given regular expression
-     *
-     * @throws  PatternSyntaxException
-     *          if the regular expression's syntax is invalid
-     *
-     * @see java.util.regex.Pattern
-     *
-     * @since 1.4
+     * @param regex the delimiting regular expression
+     * @return the array of strings computed by splitting this string
+     * around matches of the given regular expression
+     * @throws PatternSyntaxException if the regular expression's syntax is invalid
      * @spec JSR-51
+     * @see java.util.regex.Pattern
+     * @since 1.4
      */
     public String[] split(String regex) {
         return split(regex, 0);
     }
-
+    
     /**
+     * 添加字符串数组，并用指定符号隔开
+     * <p>
      * Returns a new String composed of copies of the
      * {@code CharSequence elements} joined together with a copy of
      * the specified {@code delimiter}.
@@ -2432,18 +2404,15 @@ public final class String
      *     String message = String.join("-", "Java", "is", "cool");
      *     // message returned is: "Java-is-cool"
      * }</pre></blockquote>
-     *
+     * <p>
      * Note that if an element is null, then {@code "null"} is added.
      *
-     * @param  delimiter the delimiter that separates each element
-     * @param  elements the elements to join together.
-     *
+     * @param delimiter the delimiter that separates each element
+     * @param elements  the elements to join together.
      * @return a new {@code String} that is composed of the {@code elements}
-     *         separated by the {@code delimiter}
-     *
+     * separated by the {@code delimiter}
      * @throws NullPointerException If {@code delimiter} or {@code elements}
-     *         is {@code null}
-     *
+     *                              is {@code null}
      * @see java.util.StringJoiner
      * @since 1.8
      */
@@ -2452,13 +2421,15 @@ public final class String
         Objects.requireNonNull(elements);
         // Number of elements not likely worth Arrays.stream overhead.
         StringJoiner joiner = new StringJoiner(delimiter);
-        for (CharSequence cs: elements) {
+        for (CharSequence cs : elements) {
             joiner.add(cs);
         }
         return joiner.toString();
     }
-
+    
     /**
+     * 添加字符串数组，并用指定符号隔开
+     * <p>
      * Returns a new {@code String} composed of copies of the
      * {@code CharSequence elements} joined together with a copy of the
      * specified {@code delimiter}.
@@ -2477,36 +2448,35 @@ public final class String
      *     String message = String.join("-", strings);
      *     //message returned is: "Java-is-very-cool"
      * }</pre></blockquote>
-     *
+     * <p>
      * Note that if an individual element is {@code null}, then {@code "null"} is added.
      *
-     * @param  delimiter a sequence of characters that is used to separate each
-     *         of the {@code elements} in the resulting {@code String}
-     * @param  elements an {@code Iterable} that will have its {@code elements}
-     *         joined together.
-     *
+     * @param delimiter a sequence of characters that is used to separate each
+     *                  of the {@code elements} in the resulting {@code String}
+     * @param elements  an {@code Iterable} that will have its {@code elements}
+     *                  joined together.
      * @return a new {@code String} that is composed from the {@code elements}
-     *         argument
-     *
+     * argument
      * @throws NullPointerException If {@code delimiter} or {@code elements}
-     *         is {@code null}
-     *
-     * @see    #join(CharSequence,CharSequence...)
-     * @see    java.util.StringJoiner
+     *                              is {@code null}
+     * @see #join(CharSequence, CharSequence...)
+     * @see java.util.StringJoiner
      * @since 1.8
      */
     public static String join(CharSequence delimiter,
-            Iterable<? extends CharSequence> elements) {
+                              Iterable<? extends CharSequence> elements) {
         Objects.requireNonNull(delimiter);
         Objects.requireNonNull(elements);
         StringJoiner joiner = new StringJoiner(delimiter);
-        for (CharSequence cs: elements) {
+        for (CharSequence cs : elements) {
             joiner.add(cs);
         }
         return joiner.toString();
     }
-
+    
     /**
+     * 转小写字符串
+     * <p>
      * Converts all of the characters in this {@code String} to lower
      * case using the rules of the given {@code Locale}.  Case mapping is based
      * on the Unicode Standard version specified by the {@link java.lang.Character Character}
@@ -2516,59 +2486,60 @@ public final class String
      * Examples of lowercase  mappings are in the following table:
      * <table border="1" summary="Lowercase mapping examples showing language code of locale, upper case, lower case, and description">
      * <tr>
-     *   <th>Language Code of Locale</th>
-     *   <th>Upper Case</th>
-     *   <th>Lower Case</th>
-     *   <th>Description</th>
+     * <th>Language Code of Locale</th>
+     * <th>Upper Case</th>
+     * <th>Lower Case</th>
+     * <th>Description</th>
      * </tr>
      * <tr>
-     *   <td>tr (Turkish)</td>
-     *   <td>&#92;u0130</td>
-     *   <td>&#92;u0069</td>
-     *   <td>capital letter I with dot above -&gt; small letter i</td>
+     * <td>tr (Turkish)</td>
+     * <td>&#92;u0130</td>
+     * <td>&#92;u0069</td>
+     * <td>capital letter I with dot above -&gt; small letter i</td>
      * </tr>
      * <tr>
-     *   <td>tr (Turkish)</td>
-     *   <td>&#92;u0049</td>
-     *   <td>&#92;u0131</td>
-     *   <td>capital letter I -&gt; small letter dotless i </td>
+     * <td>tr (Turkish)</td>
+     * <td>&#92;u0049</td>
+     * <td>&#92;u0131</td>
+     * <td>capital letter I -&gt; small letter dotless i </td>
      * </tr>
      * <tr>
-     *   <td>(all)</td>
-     *   <td>French Fries</td>
-     *   <td>french fries</td>
-     *   <td>lowercased all chars in String</td>
+     * <td>(all)</td>
+     * <td>French Fries</td>
+     * <td>french fries</td>
+     * <td>lowercased all chars in String</td>
      * </tr>
      * <tr>
-     *   <td>(all)</td>
-     *   <td><img src="doc-files/capiota.gif" alt="capiota"><img src="doc-files/capchi.gif" alt="capchi">
-     *       <img src="doc-files/captheta.gif" alt="captheta"><img src="doc-files/capupsil.gif" alt="capupsil">
-     *       <img src="doc-files/capsigma.gif" alt="capsigma"></td>
-     *   <td><img src="doc-files/iota.gif" alt="iota"><img src="doc-files/chi.gif" alt="chi">
-     *       <img src="doc-files/theta.gif" alt="theta"><img src="doc-files/upsilon.gif" alt="upsilon">
-     *       <img src="doc-files/sigma1.gif" alt="sigma"></td>
-     *   <td>lowercased all chars in String</td>
+     * <td>(all)</td>
+     * <td><img src="doc-files/capiota.gif" alt="capiota"><img src="doc-files/capchi.gif" alt="capchi">
+     * <img src="doc-files/captheta.gif" alt="captheta"><img src="doc-files/capupsil.gif" alt="capupsil">
+     * <img src="doc-files/capsigma.gif" alt="capsigma"></td>
+     * <td><img src="doc-files/iota.gif" alt="iota"><img src="doc-files/chi.gif" alt="chi">
+     * <img src="doc-files/theta.gif" alt="theta"><img src="doc-files/upsilon.gif" alt="upsilon">
+     * <img src="doc-files/sigma1.gif" alt="sigma"></td>
+     * <td>lowercased all chars in String</td>
      * </tr>
      * </table>
      *
      * @param locale use the case transformation rules for this locale
      * @return the {@code String}, converted to lowercase.
-     * @see     java.lang.String#toLowerCase()
-     * @see     java.lang.String#toUpperCase()
-     * @see     java.lang.String#toUpperCase(Locale)
-     * @since   1.1
+     * @see java.lang.String#toLowerCase()
+     * @see java.lang.String#toUpperCase()
+     * @see java.lang.String#toUpperCase(Locale)
+     * @since 1.1
      */
     public String toLowerCase(Locale locale) {
         if (locale == null) {
             throw new NullPointerException();
         }
-
+        
         int firstUpper;
         final int len = value.length;
-
+        
         /* Now check if there are any characters that need to be changed. */
-        scan: {
-            for (firstUpper = 0 ; firstUpper < len; ) {
+        scan:
+        {
+            for (firstUpper = 0; firstUpper < len; ) {
                 char c = value[firstUpper];
                 if ((c >= Character.MIN_HIGH_SURROGATE)
                         && (c <= Character.MAX_HIGH_SURROGATE)) {
@@ -2586,14 +2557,14 @@ public final class String
             }
             return this;
         }
-
+        
         char[] result = new char[len];
         int resultOffset = 0;  /* result may grow, so i+resultOffset
-                                * is the write location in result */
-
+         * is the write location in result */
+        
         /* Just copy the first few lowerCase characters. */
         System.arraycopy(value, 0, result, 0, firstUpper);
-
+        
         String lang = locale.getLanguage();
         boolean localeDependent =
                 (lang == "tr" || lang == "az" || lang == "lt");
@@ -2602,17 +2573,17 @@ public final class String
         int srcChar;
         int srcCount;
         for (int i = firstUpper; i < len; i += srcCount) {
-            srcChar = (int)value[i];
-            if ((char)srcChar >= Character.MIN_HIGH_SURROGATE
-                    && (char)srcChar <= Character.MAX_HIGH_SURROGATE) {
+            srcChar = (int) value[i];
+            if ((char) srcChar >= Character.MIN_HIGH_SURROGATE
+                    && (char) srcChar <= Character.MAX_HIGH_SURROGATE) {
                 srcChar = codePointAt(i);
                 srcCount = Character.charCount(srcChar);
             } else {
                 srcCount = 1;
             }
             if (localeDependent ||
-                srcChar == '\u03A3' || // GREEK CAPITAL LETTER SIGMA
-                srcChar == '\u0130') { // LATIN CAPITAL LETTER I WITH DOT ABOVE
+                    srcChar == '\u03A3' || // GREEK CAPITAL LETTER SIGMA
+                    srcChar == '\u0130') { // LATIN CAPITAL LETTER I WITH DOT ABOVE
                 lowerChar = ConditionalSpecialCasing.toLowerCaseEx(this, i, locale);
             } else {
                 lowerChar = Character.toLowerCase(srcChar);
@@ -2628,7 +2599,7 @@ public final class String
                 } else {
                     lowerCharArray = Character.toChars(lowerChar);
                 }
-
+                
                 /* Grow result if needed */
                 int mapLen = lowerCharArray.length;
                 if (mapLen > srcCount) {
@@ -2641,13 +2612,15 @@ public final class String
                 }
                 resultOffset += (mapLen - srcCount);
             } else {
-                result[i + resultOffset] = (char)lowerChar;
+                result[i + resultOffset] = (char) lowerChar;
             }
         }
         return new String(result, 0, len + resultOffset);
     }
-
+    
     /**
+     * 转小写字符串
+     * <p>
      * Converts all of the characters in this {@code String} to lower
      * case using the rules of the default locale. This is equivalent to calling
      * {@code toLowerCase(Locale.getDefault())}.
@@ -2663,14 +2636,17 @@ public final class String
      * To obtain correct results for locale insensitive strings, use
      * {@code toLowerCase(Locale.ROOT)}.
      * <p>
-     * @return  the {@code String}, converted to lowercase.
-     * @see     java.lang.String#toLowerCase(Locale)
+     *
+     * @return the {@code String}, converted to lowercase.
+     * @see java.lang.String#toLowerCase(Locale)
      */
     public String toLowerCase() {
         return toLowerCase(Locale.getDefault());
     }
-
+    
     /**
+     * 转大写字符串
+     *
      * Converts all of the characters in this {@code String} to upper
      * case using the rules of the given {@code Locale}. Case mapping is based
      * on the Unicode Standard version specified by the {@link java.lang.Character Character}
@@ -2681,55 +2657,57 @@ public final class String
      *
      * <table border="1" summary="Examples of locale-sensitive and 1:M case mappings. Shows Language code of locale, lower case, upper case, and description.">
      * <tr>
-     *   <th>Language Code of Locale</th>
-     *   <th>Lower Case</th>
-     *   <th>Upper Case</th>
-     *   <th>Description</th>
+     * <th>Language Code of Locale</th>
+     * <th>Lower Case</th>
+     * <th>Upper Case</th>
+     * <th>Description</th>
      * </tr>
      * <tr>
-     *   <td>tr (Turkish)</td>
-     *   <td>&#92;u0069</td>
-     *   <td>&#92;u0130</td>
-     *   <td>small letter i -&gt; capital letter I with dot above</td>
+     * <td>tr (Turkish)</td>
+     * <td>&#92;u0069</td>
+     * <td>&#92;u0130</td>
+     * <td>small letter i -&gt; capital letter I with dot above</td>
      * </tr>
      * <tr>
-     *   <td>tr (Turkish)</td>
-     *   <td>&#92;u0131</td>
-     *   <td>&#92;u0049</td>
-     *   <td>small letter dotless i -&gt; capital letter I</td>
+     * <td>tr (Turkish)</td>
+     * <td>&#92;u0131</td>
+     * <td>&#92;u0049</td>
+     * <td>small letter dotless i -&gt; capital letter I</td>
      * </tr>
      * <tr>
-     *   <td>(all)</td>
-     *   <td>&#92;u00df</td>
-     *   <td>&#92;u0053 &#92;u0053</td>
-     *   <td>small letter sharp s -&gt; two letters: SS</td>
+     * <td>(all)</td>
+     * <td>&#92;u00df</td>
+     * <td>&#92;u0053 &#92;u0053</td>
+     * <td>small letter sharp s -&gt; two letters: SS</td>
      * </tr>
      * <tr>
-     *   <td>(all)</td>
-     *   <td>Fahrvergn&uuml;gen</td>
-     *   <td>FAHRVERGN&Uuml;GEN</td>
-     *   <td></td>
+     * <td>(all)</td>
+     * <td>Fahrvergn&uuml;gen</td>
+     * <td>FAHRVERGN&Uuml;GEN</td>
+     * <td></td>
      * </tr>
      * </table>
+     *
      * @param locale use the case transformation rules for this locale
      * @return the {@code String}, converted to uppercase.
-     * @see     java.lang.String#toUpperCase()
-     * @see     java.lang.String#toLowerCase()
-     * @see     java.lang.String#toLowerCase(Locale)
-     * @since   1.1
+     * @see java.lang.String#toUpperCase()
+     * @see java.lang.String#toLowerCase()
+     * @see java.lang.String#toLowerCase(Locale)
+     * @since 1.1
      */
     public String toUpperCase(Locale locale) {
         if (locale == null) {
             throw new NullPointerException();
         }
-
+        
         int firstLower;
         final int len = value.length;
-
+        
         /* Now check if there are any characters that need to be changed. */
-        scan: {
-            for (firstLower = 0 ; firstLower < len; ) {
-                int c = (int)value[firstLower];
+        scan:
+        {
+            for (firstLower = 0; firstLower < len; ) {
+                int c = (int) value[firstLower];
                 int srcCount;
                 if ((c >= Character.MIN_HIGH_SURROGATE)
                         && (c <= Character.MAX_HIGH_SURROGATE)) {
@@ -2747,14 +2725,14 @@ public final class String
             }
             return this;
         }
-
+        
         /* result may grow, so i+resultOffset is the write location in result */
         int resultOffset = 0;
         char[] result = new char[len]; /* may grow */
-
+        
         /* Just copy the first few upperCase characters. */
         System.arraycopy(value, 0, result, 0, firstLower);
-
+        
         String lang = locale.getLanguage();
         boolean localeDependent =
                 (lang == "tr" || lang == "az" || lang == "lt");
@@ -2763,9 +2741,9 @@ public final class String
         int srcChar;
         int srcCount;
         for (int i = firstLower; i < len; i += srcCount) {
-            srcChar = (int)value[i];
-            if ((char)srcChar >= Character.MIN_HIGH_SURROGATE &&
-                (char)srcChar <= Character.MAX_HIGH_SURROGATE) {
+            srcChar = (int) value[i];
+            if ((char) srcChar >= Character.MIN_HIGH_SURROGATE &&
+                    (char) srcChar <= Character.MAX_HIGH_SURROGATE) {
                 srcChar = codePointAt(i);
                 srcCount = Character.charCount(srcChar);
             } else {
@@ -2791,7 +2769,7 @@ public final class String
                 } else {
                     upperCharArray = Character.toChars(upperChar);
                 }
-
+                
                 /* Grow result if needed */
                 int mapLen = upperCharArray.length;
                 if (mapLen > srcCount) {
@@ -2804,13 +2782,15 @@ public final class String
                 }
                 resultOffset += (mapLen - srcCount);
             } else {
-                result[i + resultOffset] = (char)upperChar;
+                result[i + resultOffset] = (char) upperChar;
             }
         }
         return new String(result, 0, len + resultOffset);
     }
-
+    
     /**
+     * 转大写字符串
+     *
      * Converts all of the characters in this {@code String} to upper
      * case using the rules of the default locale. This method is equivalent to
      * {@code toUpperCase(Locale.getDefault())}.
@@ -2826,14 +2806,17 @@ public final class String
      * To obtain correct results for locale insensitive strings, use
      * {@code toUpperCase(Locale.ROOT)}.
      * <p>
-     * @return  the {@code String}, converted to uppercase.
-     * @see     java.lang.String#toUpperCase(Locale)
+     *
+     * @return the {@code String}, converted to uppercase.
+     * @see java.lang.String#toUpperCase(Locale)
      */
     public String toUpperCase() {
         return toUpperCase(Locale.getDefault());
     }
-
+    
     /**
+     * 去前后空格
+     *
      * Returns a string whose value is this string, with any leading and trailing
      * whitespace removed.
      * <p>
@@ -2860,15 +2843,15 @@ public final class String
      * This method may be used to trim whitespace (as defined above) from
      * the beginning and end of a string.
      *
-     * @return  A string whose value is this string, with any leading and trailing white
-     *          space removed, or this string if it has no leading or
-     *          trailing white space.
+     * @return A string whose value is this string, with any leading and trailing white
+     * space removed, or this string if it has no leading or
+     * trailing white space.
      */
     public String trim() {
         int len = value.length;
         int st = 0;
         char[] val = value;    /* avoid getfield opcode */
-
+        
         while ((st < len) && (val[st] <= ' ')) {
             st++;
         }
@@ -2877,22 +2860,24 @@ public final class String
         }
         return ((st > 0) || (len < value.length)) ? substring(st, len) : this;
     }
-
+    
     /**
      * This object (which is already a string!) is itself returned.
      *
-     * @return  the string itself.
+     * @return the string itself.
      */
     public String toString() {
         return this;
     }
-
+    
     /**
+     * 返回 char 数组
+     *
      * Converts this string to a new character array.
      *
-     * @return  a newly allocated character array whose length is the length
-     *          of this string and whose contents are initialized to contain
-     *          the character sequence represented by this string.
+     * @return a newly allocated character array whose length is the length
+     * of this string and whose contents are initialized to contain
+     * the character sequence represented by this string.
      */
     public char[] toCharArray() {
         // Cannot use Arrays.copyOf because of class initialization order issues
@@ -2900,115 +2885,109 @@ public final class String
         System.arraycopy(value, 0, result, 0, value.length);
         return result;
     }
-
+    
     /**
+     * 格式化字符串
+     *
      * Returns a formatted string using the specified format string and
      * arguments.
      *
      * <p> The locale always used is the one returned by {@link
      * java.util.Locale#getDefault() Locale.getDefault()}.
      *
-     * @param  format
-     *         A <a href="../util/Formatter.html#syntax">format string</a>
-     *
-     * @param  args
-     *         Arguments referenced by the format specifiers in the format
-     *         string.  If there are more arguments than format specifiers, the
-     *         extra arguments are ignored.  The number of arguments is
-     *         variable and may be zero.  The maximum number of arguments is
-     *         limited by the maximum dimension of a Java array as defined by
-     *         <cite>The Java&trade; Virtual Machine Specification</cite>.
-     *         The behaviour on a
-     *         {@code null} argument depends on the <a
-     *         href="../util/Formatter.html#syntax">conversion</a>.
-     *
-     * @throws  java.util.IllegalFormatException
-     *          If a format string contains an illegal syntax, a format
-     *          specifier that is incompatible with the given arguments,
-     *          insufficient arguments given the format string, or other
-     *          illegal conditions.  For specification of all possible
-     *          formatting errors, see the <a
-     *          href="../util/Formatter.html#detail">Details</a> section of the
-     *          formatter class specification.
-     *
-     * @return  A formatted string
-     *
-     * @see  java.util.Formatter
-     * @since  1.5
+     * @param format A <a href="../util/Formatter.html#syntax">format string</a>
+     * @param args   Arguments referenced by the format specifiers in the format
+     *               string.  If there are more arguments than format specifiers, the
+     *               extra arguments are ignored.  The number of arguments is
+     *               variable and may be zero.  The maximum number of arguments is
+     *               limited by the maximum dimension of a Java array as defined by
+     *               <cite>The Java&trade; Virtual Machine Specification</cite>.
+     *               The behaviour on a
+     *               {@code null} argument depends on the <a
+     *               href="../util/Formatter.html#syntax">conversion</a>.
+     * @return A formatted string
+     * @throws java.util.IllegalFormatException If a format string contains an illegal syntax, a format
+     *                                          specifier that is incompatible with the given arguments,
+     *                                          insufficient arguments given the format string, or other
+     *                                          illegal conditions.  For specification of all possible
+     *                                          formatting errors, see the <a
+     *                                          href="../util/Formatter.html#detail">Details</a> section of the
+     *                                          formatter class specification.
+     * @see java.util.Formatter
+     * @since 1.5
      */
     public static String format(String format, Object... args) {
         return new Formatter().format(format, args).toString();
     }
-
+    
     /**
+     * 格式化字符串
+     *
      * Returns a formatted string using the specified locale, format string,
      * and arguments.
      *
-     * @param  l
-     *         The {@linkplain java.util.Locale locale} to apply during
-     *         formatting.  If {@code l} is {@code null} then no localization
-     *         is applied.
-     *
-     * @param  format
-     *         A <a href="../util/Formatter.html#syntax">format string</a>
-     *
-     * @param  args
-     *         Arguments referenced by the format specifiers in the format
-     *         string.  If there are more arguments than format specifiers, the
-     *         extra arguments are ignored.  The number of arguments is
-     *         variable and may be zero.  The maximum number of arguments is
-     *         limited by the maximum dimension of a Java array as defined by
-     *         <cite>The Java&trade; Virtual Machine Specification</cite>.
-     *         The behaviour on a
-     *         {@code null} argument depends on the
-     *         <a href="../util/Formatter.html#syntax">conversion</a>.
-     *
-     * @throws  java.util.IllegalFormatException
-     *          If a format string contains an illegal syntax, a format
-     *          specifier that is incompatible with the given arguments,
-     *          insufficient arguments given the format string, or other
-     *          illegal conditions.  For specification of all possible
-     *          formatting errors, see the <a
-     *          href="../util/Formatter.html#detail">Details</a> section of the
-     *          formatter class specification
-     *
-     * @return  A formatted string
-     *
-     * @see  java.util.Formatter
-     * @since  1.5
+     * @param l      The {@linkplain java.util.Locale locale} to apply during
+     *               formatting.  If {@code l} is {@code null} then no localization
+     *               is applied.
+     * @param format A <a href="../util/Formatter.html#syntax">format string</a>
+     * @param args   Arguments referenced by the format specifiers in the format
+     *               string.  If there are more arguments than format specifiers, the
+     *               extra arguments are ignored.  The number of arguments is
+     *               variable and may be zero.  The maximum number of arguments is
+     *               limited by the maximum dimension of a Java array as defined by
+     *               <cite>The Java&trade; Virtual Machine Specification</cite>.
+     *               The behaviour on a
+     *               {@code null} argument depends on the
+     *               <a href="../util/Formatter.html#syntax">conversion</a>.
+     * @return A formatted string
+     * @throws java.util.IllegalFormatException If a format string contains an illegal syntax, a format
+     *                                          specifier that is incompatible with the given arguments,
+     *                                          insufficient arguments given the format string, or other
+     *                                          illegal conditions.  For specification of all possible
+     *                                          formatting errors, see the <a
+     *                                          href="../util/Formatter.html#detail">Details</a> section of the
+     *                                          formatter class specification
+     * @see java.util.Formatter
+     * @since 1.5
      */
     public static String format(Locale l, String format, Object... args) {
         return new Formatter(l).format(format, args).toString();
     }
-
+    
     /**
+     * 包裹值
+     *
      * Returns the string representation of the {@code Object} argument.
      *
-     * @param   obj   an {@code Object}.
-     * @return  if the argument is {@code null}, then a string equal to
-     *          {@code "null"}; otherwise, the value of
-     *          {@code obj.toString()} is returned.
-     * @see     java.lang.Object#toString()
+     * @param obj an {@code Object}.
+     * @return if the argument is {@code null}, then a string equal to
+     * {@code "null"}; otherwise, the value of
+     * {@code obj.toString()} is returned.
+     * @see java.lang.Object#toString()
      */
     public static String valueOf(Object obj) {
         return (obj == null) ? "null" : obj.toString();
     }
-
+    
     /**
+     * 包裹值
+     *
      * Returns the string representation of the {@code char} array
      * argument. The contents of the character array are copied; subsequent
      * modification of the character array does not affect the returned
      * string.
      *
-     * @param   data     the character array.
-     * @return  a {@code String} that contains the characters of the
-     *          character array.
+     * @param data the character array.
+     * @return a {@code String} that contains the characters of the
+     * character array.
      */
     public static String valueOf(char data[]) {
         return new String(data);
     }
-
+    
     /**
+     * 包裹值
+     *
      * Returns the string representation of a specific subarray of the
      * {@code char} array argument.
      * <p>
@@ -3018,129 +2997,145 @@ public final class String
      * are copied; subsequent modification of the character array does not
      * affect the returned string.
      *
-     * @param   data     the character array.
-     * @param   offset   initial offset of the subarray.
-     * @param   count    length of the subarray.
-     * @return  a {@code String} that contains the characters of the
-     *          specified subarray of the character array.
-     * @exception IndexOutOfBoundsException if {@code offset} is
-     *          negative, or {@code count} is negative, or
-     *          {@code offset+count} is larger than
-     *          {@code data.length}.
+     * @param data   the character array.
+     * @param offset initial offset of the subarray.
+     * @param count  length of the subarray.
+     * @return a {@code String} that contains the characters of the
+     * specified subarray of the character array.
+     * @throws IndexOutOfBoundsException if {@code offset} is
+     *                                   negative, or {@code count} is negative, or
+     *                                   {@code offset+count} is larger than
+     *                                   {@code data.length}.
      */
     public static String valueOf(char data[], int offset, int count) {
         return new String(data, offset, count);
     }
-
+    
     /**
+     * 包裹值
+     *
      * Equivalent to {@link #valueOf(char[], int, int)}.
      *
-     * @param   data     the character array.
-     * @param   offset   initial offset of the subarray.
-     * @param   count    length of the subarray.
-     * @return  a {@code String} that contains the characters of the
-     *          specified subarray of the character array.
-     * @exception IndexOutOfBoundsException if {@code offset} is
-     *          negative, or {@code count} is negative, or
-     *          {@code offset+count} is larger than
-     *          {@code data.length}.
+     * @param data   the character array.
+     * @param offset initial offset of the subarray.
+     * @param count  length of the subarray.
+     * @return a {@code String} that contains the characters of the
+     * specified subarray of the character array.
+     * @throws IndexOutOfBoundsException if {@code offset} is
+     *                                   negative, or {@code count} is negative, or
+     *                                   {@code offset+count} is larger than
+     *                                   {@code data.length}.
      */
     public static String copyValueOf(char data[], int offset, int count) {
         return new String(data, offset, count);
     }
-
+    
     /**
+     * 包裹值
+     *
      * Equivalent to {@link #valueOf(char[])}.
      *
-     * @param   data   the character array.
-     * @return  a {@code String} that contains the characters of the
-     *          character array.
+     * @param data the character array.
+     * @return a {@code String} that contains the characters of the
+     * character array.
      */
     public static String copyValueOf(char data[]) {
         return new String(data);
     }
-
+    
     /**
+     * 包裹值
+     *
      * Returns the string representation of the {@code boolean} argument.
      *
-     * @param   b   a {@code boolean}.
-     * @return  if the argument is {@code true}, a string equal to
-     *          {@code "true"} is returned; otherwise, a string equal to
-     *          {@code "false"} is returned.
+     * @param b a {@code boolean}.
+     * @return if the argument is {@code true}, a string equal to
+     * {@code "true"} is returned; otherwise, a string equal to
+     * {@code "false"} is returned.
      */
     public static String valueOf(boolean b) {
         return b ? "true" : "false";
     }
-
+    
     /**
+     * 包裹值
+     *
      * Returns the string representation of the {@code char}
      * argument.
      *
-     * @param   c   a {@code char}.
-     * @return  a string of length {@code 1} containing
-     *          as its single character the argument {@code c}.
+     * @param c a {@code char}.
+     * @return a string of length {@code 1} containing
+     * as its single character the argument {@code c}.
      */
     public static String valueOf(char c) {
         char data[] = {c};
         return new String(data, true);
     }
-
+    
     /**
+     * 包裹值
+     *
      * Returns the string representation of the {@code int} argument.
      * <p>
      * The representation is exactly the one returned by the
      * {@code Integer.toString} method of one argument.
      *
-     * @param   i   an {@code int}.
-     * @return  a string representation of the {@code int} argument.
-     * @see     java.lang.Integer#toString(int, int)
+     * @param i an {@code int}.
+     * @return a string representation of the {@code int} argument.
+     * @see java.lang.Integer#toString(int, int)
      */
     public static String valueOf(int i) {
         return Integer.toString(i);
     }
-
+    
     /**
+     * 包裹值
+     *
      * Returns the string representation of the {@code long} argument.
      * <p>
      * The representation is exactly the one returned by the
      * {@code Long.toString} method of one argument.
      *
-     * @param   l   a {@code long}.
-     * @return  a string representation of the {@code long} argument.
-     * @see     java.lang.Long#toString(long)
+     * @param l a {@code long}.
+     * @return a string representation of the {@code long} argument.
+     * @see java.lang.Long#toString(long)
      */
     public static String valueOf(long l) {
         return Long.toString(l);
     }
-
+    
     /**
+     * 包裹值
+     *
      * Returns the string representation of the {@code float} argument.
      * <p>
      * The representation is exactly the one returned by the
      * {@code Float.toString} method of one argument.
      *
-     * @param   f   a {@code float}.
-     * @return  a string representation of the {@code float} argument.
-     * @see     java.lang.Float#toString(float)
+     * @param f a {@code float}.
+     * @return a string representation of the {@code float} argument.
+     * @see java.lang.Float#toString(float)
      */
     public static String valueOf(float f) {
         return Float.toString(f);
     }
-
+    
     /**
+     * 包裹值
+     *
      * Returns the string representation of the {@code double} argument.
      * <p>
      * The representation is exactly the one returned by the
      * {@code Double.toString} method of one argument.
      *
-     * @param   d   a {@code double}.
-     * @return  a  string representation of the {@code double} argument.
-     * @see     java.lang.Double#toString(double)
+     * @param d a {@code double}.
+     * @return a  string representation of the {@code double} argument.
+     * @see java.lang.Double#toString(double)
      */
     public static String valueOf(double d) {
         return Double.toString(d);
     }
-
+    
     /**
      * Returns a canonical representation for the string object.
      * <p>
@@ -3161,8 +3156,8 @@ public final class String
      * interned. String literals are defined in section 3.10.5 of the
      * <cite>The Java&trade; Language Specification</cite>.
      *
-     * @return  a string that has the same contents as this string, but is
-     *          guaranteed to be from a pool of unique strings.
+     * @return a string that has the same contents as this string, but is
+     * guaranteed to be from a pool of unique strings.
      */
     public native String intern();
 }

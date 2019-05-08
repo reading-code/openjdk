@@ -4651,6 +4651,7 @@ class Character implements java.io.Serializable, Comparable<Character> {
     }
 
     /**
+     * 是否符合 Unicode 0x10000到0x10FFFF之间的字符
      * Determines whether the specified code point is a valid
      * <a href="http://www.unicode.org/glossary/#code_point">
      * Unicode code point value</a>.
@@ -4670,6 +4671,8 @@ class Character implements java.io.Serializable, Comparable<Character> {
     }
 
     /**
+     * 判断是否符合 Unicode (既,是否超出 Unicode 范围)
+     *
      * Determines whether the specified character (Unicode code point)
      * is in the <a href="#BMP">Basic Multilingual Plane (BMP)</a>.
      * Such code points can be represented using a single {@code char}.

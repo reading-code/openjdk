@@ -143,7 +143,14 @@ class StringCoding {
         final String requestedCharsetName() {
             return requestedCharsetName;
         }
-
+    
+        /**
+         * 根据解码器解码
+         * @param ba
+         * @param off
+         * @param len
+         * @return
+         */
         char[] decode(byte[] ba, int off, int len) {
             int en = scale(len, cd.maxCharsPerByte());
             char[] ca = new char[en];
@@ -172,12 +179,23 @@ class StringCoding {
             }
         }
     }
-
+    
+    /**
+     * 根据字符集进行解码操作
+     * @param charsetName
+     * @param ba
+     * @param off
+     * @param len
+     * @return
+     * @throws UnsupportedEncodingException
+     */
     static char[] decode(String charsetName, byte[] ba, int off, int len)
         throws UnsupportedEncodingException
     {
         StringDecoder sd = deref(decoder);
         String csn = (charsetName == null) ? "ISO-8859-1" : charsetName;
+        
+        // 检查和缓存解码器
         if ((sd == null) || !(csn.equals(sd.requestedCharsetName())
                               || csn.equals(sd.charsetName()))) {
             sd = null;
